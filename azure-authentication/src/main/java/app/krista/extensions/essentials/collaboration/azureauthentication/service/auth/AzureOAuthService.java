@@ -26,7 +26,7 @@ public class AzureOAuthService {
             oAuth20Service = new ServiceBuilder("df4cbf46-4775-4bf2-b1aa-5e08b44c8cfc")
                     .apiSecret("REDACTED_SECRET_0")
                     .defaultScope("user.read openid profile offline_access")
-                    .callback(routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/azureauth/callback")
+                    .callback(routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback")
                     .build(MicrosoftAzureActiveDirectory20Api.custom("c4d5be5b-6f10-488d-b7db-c0676c352975"));
         }
         return oAuth20Service;
