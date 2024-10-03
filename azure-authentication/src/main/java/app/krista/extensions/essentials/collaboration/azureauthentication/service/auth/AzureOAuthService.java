@@ -10,6 +10,8 @@ import org.jvnet.hk2.annotations.Service;
 
 import javax.inject.Inject;
 
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.DEFAULT_CALLBACK_PATH;
+
 @Service
 public class AzureOAuthService {
     private OAuth20Service oAuth20Service;
@@ -23,17 +25,23 @@ public class AzureOAuthService {
 
     public synchronized OAuth20Service getOAuth20Service() {
         if (oAuth20Service == null) {
-            oAuth20Service = new ServiceBuilder("df4cbf46-4775-4bf2-b1aa-5e08b44c8cfc")
-                    .apiSecret("REDACTED_SECRET_0")
-                    .defaultScope("user.read openid profile offline_access")
-                    .callback(routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback")
-                    .build(MicrosoftAzureActiveDirectory20Api.custom("c4d5be5b-6f10-488d-b7db-c0676c352975"));
+            AzureAuthenticationCredential credential = new AzureAuthenticationCredentialBuilder().build();
+            //String redirectURL = "http://localhost:8765/extension/api/authn/callback";
+            String routingUrl = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
+            routingUrl = routingUrl.replace("/extension/api/.*", DEFAULT_CALLBACK_PATH);
+            oAuth20Service = new ServiceBuilder(credential.getClientId())
+                    .apiSecret(credential.getClientSecret())
+                    .defaultScope(credential.getScope())
+                    .callback(routingUrl)
+                    .build(MicrosoftAzureActiveDirectory20Api.custom(credential.getTenantId()));
         }
         return oAuth20Service;
     }
 
     public String getAuthorizationURL() {
-        return oAuth20Service.getAuthorizationUrl();
+        String redirectURLState = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback";
+        redirectURLState += "#&access_type=offline&approval_prompt=force&prompt=select_account&forward=true";
+        return oAuth20Service.getAuthorizationUrl(redirectURLState);
     }
 
 }
