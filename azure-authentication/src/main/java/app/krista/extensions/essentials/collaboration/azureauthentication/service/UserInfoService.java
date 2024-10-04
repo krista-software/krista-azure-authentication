@@ -11,8 +11,6 @@ import java.util.concurrent.CompletableFuture;
 public class UserInfoService {
     public String getEmail(CompletableFuture<String> accessTokenFuture) {
         GraphServiceClient<Request> graphClient = GraphServiceClient.builder().authenticationProvider(url -> accessTokenFuture).buildClient();
-        String id = Objects.requireNonNull(graphClient.me().buildRequest().get()).id;
-        System.out.printf("user %s authenticated successfully", id);
-        return id;
+        return Objects.requireNonNull(graphClient.me().buildRequest().get()).userPrincipalName;
     }
 }

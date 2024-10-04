@@ -26,9 +26,8 @@ public class AzureOAuthService {
     public synchronized OAuth20Service getOAuth20Service() {
         if (oAuth20Service == null) {
             AzureAuthenticationCredential credential = new AzureAuthenticationCredentialBuilder().build();
-            //String redirectURL = "http://localhost:8765/extension/api/authn/callback";
             String routingUrl = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
-            routingUrl = routingUrl.replace("/extension/api/.*", DEFAULT_CALLBACK_PATH);
+            routingUrl = routingUrl.replaceAll("/extension/api/.*", DEFAULT_CALLBACK_PATH);
             oAuth20Service = new ServiceBuilder(credential.getClientId())
                     .apiSecret(credential.getClientSecret())
                     .defaultScope(credential.getScope())

@@ -1,8 +1,13 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication;
 
+import app.krista.extension.authorization.RequestAuthenticator;
 import app.krista.extension.impl.anno.Domain;
 import app.krista.extension.impl.anno.Extension;
+import app.krista.extension.impl.anno.InvokerRequest;
 import app.krista.extension.impl.anno.StaticResource;
+
+import javax.inject.Inject;
+
 @Domain(id = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7",
         name = "Authentication",
         ecosystemId = "catEntryEcosystem_d3b05047-07b0-4b06-95a3-9fb8f7f608d9",
@@ -11,4 +16,15 @@ import app.krista.extension.impl.anno.StaticResource;
 @Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true)
 @StaticResource(path = "docs", file = "docs")
 public class AzureAuthenticationExtension {
+    private final RequestAuthenticator requestAuthenticator;
+
+    @Inject
+    public AzureAuthenticationExtension(AzureAuthenticationExtensionRequestAuthenticator requestAuthenticator) {
+        this.requestAuthenticator = requestAuthenticator;
+    }
+
+    @InvokerRequest(InvokerRequest.Type.AUTHENTICATOR)
+    public RequestAuthenticator getAuthenticatedAccountId() {
+        return requestAuthenticator;
+    }
 }
