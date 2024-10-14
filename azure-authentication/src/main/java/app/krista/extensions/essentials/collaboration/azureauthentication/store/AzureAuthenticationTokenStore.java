@@ -54,4 +54,16 @@ public class AzureAuthenticationTokenStore {
     public Set<String> getKeys() {
         return keyValueStore.getKeys();
     }
+
+    public void saveSessionId(String accountId, String sessionId) {
+        keyValueStore.put(getSessionKey(accountId), sessionId);
+    }
+
+    private String getSessionKey(String accountId) {
+        return "session_" + accountId;
+    }
+
+    public String getSessionId(String accountId) {
+        return (String) keyValueStore.get(getSessionKey(accountId));
+    }
 }

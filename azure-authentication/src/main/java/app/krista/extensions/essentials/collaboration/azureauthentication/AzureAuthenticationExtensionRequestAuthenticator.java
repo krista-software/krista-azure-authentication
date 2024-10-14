@@ -6,10 +6,14 @@ import app.krista.extension.authorization.RequestAuthenticator;
 import app.krista.extension.request.ProtoRequest;
 import app.krista.extension.request.ProtoResponse;
 import app.krista.extension.request.protos.http.HttpRequest;
+import app.krista.extension.request.protos.http.HttpResponse;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.AccountManagerService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
+import app.krista.ksdk.accounts.AccountProvider;
+import app.krista.ksdk.authentication.SessionManager;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.model.field.NamedField;
 import com.github.scribejava.core.model.OAuth2AccessToken;
@@ -18,12 +22,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -35,14 +38,18 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     private final AzureAuthenticationTokenStore tokenStore;
     private final AccountManagerService accountManagerService;
     private final AzureOAuthService azureOAuthService;
+    private final SessionManager sessionManager;
+    private final AccountProvider accountProvider;
 
     @Inject
-    public AzureAuthenticationExtensionRequestAuthenticator(AuthorizationContext authorizationContext, UserInfoService userInfoService, AzureAuthenticationTokenStore tokenStore, AccountManagerService accountManagerService, AzureOAuthService azureOAuthService) {
+    public AzureAuthenticationExtensionRequestAuthenticator(AuthorizationContext authorizationContext, UserInfoService userInfoService, AzureAuthenticationTokenStore tokenStore, AccountManagerService accountManagerService, AzureOAuthService azureOAuthService, SessionManager sessionManager, AccountProvider accountProvider) {
         this.authorizationContext = authorizationContext;
         this.userInfoService = userInfoService;
         this.tokenStore = tokenStore;
         this.accountManagerService = accountManagerService;
         this.azureOAuthService = azureOAuthService;
+        this.sessionManager = sessionManager;
+        this.accountProvider = accountProvider;
     }
 
     @Override
@@ -62,9 +69,11 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
             LOGGER.info("path {}", path);
-            if (Objects.equals("/login", path)) {
-                LOGGER.info("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
-                return authorizationContext.getAuthorizedAccount().getAccountId();
+            String cookie = httpRequest.getHeader(Constants.COOKIE);
+            String clientSessionId = getCookie(cookie, Constants.CHATBOT_SESSION_ID);
+            if (!Objects.isNull(clientSessionId)) {
+                String authenticatedAccountId = getAuthenticatedAccountId(clientSessionId);
+                if (authenticatedAccountId != null) return authenticatedAccountId;
             }
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
@@ -72,8 +81,37 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
                 LOGGER.info("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
                 return handleCallback(code.get(0));
             }
+            return null;
         } catch (Exception cause) {
             throw new IllegalStateException("Failed to authenticate : Reason: " + cause.getMessage(), cause);
+        }
+    }
+
+    private String getAuthenticatedAccountId(String clientSessionId) {
+        String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
+        if (!Objects.isNull(authenticatedAccountId)) {
+            try {
+                accountProvider.getAccount(authenticatedAccountId);
+                LOGGER.info("Got Authenticated AccountId: {}", authenticatedAccountId);
+                return authenticatedAccountId;
+            } catch (NoSuchElementException cause) {
+                LOGGER.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
+            }
+        }
+        LOGGER.info("No account found for clientSessionId: {}", clientSessionId);
+        return null;
+    }
+
+    private String getCookie(String cookie, String key) {
+        if (!Objects.isNull(cookie)) {
+            String[] cookies = cookie.split(";");
+            for (String c : cookies) {
+                if (c.trim().startsWith(key)) {
+                    System.out.println("c:" + c);
+                    String[] keyValue = c.split("=");
+                    return keyValue.length > 1 ? keyValue[1] : null;
+                }
+            }
         }
         return null;
     }
@@ -90,22 +128,30 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public ProtoResponse getMustAuthenticateResponse(MustAuthenticateException e, ProtoRequest protoRequest) {
-        return null;
+        return new HttpResponse(302,
+                Map.of(HttpHeaders.LOCATION, azureOAuthService.getAuthorizationURL(),
+                        "Access-Control-Allow-Origin", "*"),
+                new ByteArrayInputStream(new byte[0]));
     }
 
     @Override
     public AuthorizationResponse getMustAuthenticateResponse(MustAuthenticateException e) {
-        return null;
+        return new AuthorizationResponse(azureOAuthService.getAuthorizationURL(), List.of());
     }
 
     @Override
     public ProtoResponse getMustAuthorizeResponse(MustAuthorizeException e, ProtoRequest protoRequest) {
-        return null;
+        HttpRequest httpRequest = (HttpRequest) protoRequest;
+        String routingUrl = httpRequest.getHeader("routingUrl");
+        return new HttpResponse(302,
+                Map.of(HttpHeaders.LOCATION, azureOAuthService.getAuthorizationURL() + "?caller=" + routingUrl + httpRequest.getUri().toString(),
+                        "Access-Control-Allow-Origin", "*"),
+                new ByteArrayInputStream(new byte[0]));
     }
 
     @Override
     public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException e) {
-        return null;
+        return new AuthorizationResponse(azureOAuthService.getAuthorizationURL(), List.of());
     }
 
     public String handleCallback(String code) {
@@ -120,7 +166,12 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             LOGGER.info("{} authenticated successfully", email);
             String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
             LOGGER.info("accountID {} ", accountIdByEmail);
-            return accountIdByEmail != null ? accountIdByEmail : accountManagerService.createAccount(email);
+            if (Objects.isNull(accountIdByEmail)) {
+                accountIdByEmail = accountManagerService.createAccount(email);
+                String sessionId = sessionManager.createSession(authorizationContext.getAuthorizedAccount().getAccountId());
+                tokenStore.saveSessionId(accountIdByEmail, sessionId);
+            }
+            return accountIdByEmail;
         } catch (InterruptedException cause) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(cause);
