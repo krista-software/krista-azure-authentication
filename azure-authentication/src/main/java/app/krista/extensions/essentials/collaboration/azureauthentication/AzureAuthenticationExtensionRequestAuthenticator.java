@@ -17,6 +17,7 @@ import app.krista.ksdk.authentication.SessionManager;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.model.field.NamedField;
 import com.github.scribejava.core.model.OAuth2AccessToken;
+import org.jetbrains.annotations.Nullable;
 import org.jvnet.hk2.annotations.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.CLIENT_SESSION_ID;
 
 @Service
 public class AzureAuthenticationExtensionRequestAuthenticator implements RequestAuthenticator {
@@ -69,22 +72,44 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
             LOGGER.info("path {}", path);
-            String cookie = httpRequest.getHeader(Constants.COOKIE);
-            String clientSessionId = getCookie(cookie, Constants.CHATBOT_SESSION_ID);
-            if (!Objects.isNull(clientSessionId)) {
-                String authenticatedAccountId = getAuthenticatedAccountId(clientSessionId);
-                if (authenticatedAccountId != null) return authenticatedAccountId;
-            }
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
                 LOGGER.info("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
                 return handleCallback(code.get(0));
             }
+            String clientSessionId = getClientSessionId(httpRequest);
+            if (!Objects.isNull(clientSessionId)) {
+                String authenticatedAccountId = getAuthenticatedAccountId(clientSessionId);
+                if (authenticatedAccountId != null) return authenticatedAccountId;
+            }
             return null;
         } catch (Exception cause) {
             throw new IllegalStateException("Failed to authenticate : Reason: " + cause.getMessage(), cause);
         }
+    }
+
+    private @Nullable String getClientSessionId(HttpRequest httpRequest) {
+        String cookie = httpRequest.getHeader(Constants.COOKIE);
+        String clientSessionId = getCookie(cookie, CLIENT_SESSION_ID);
+        if (Objects.isNull(clientSessionId)) {
+            return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
+        }
+        return clientSessionId;
+    }
+
+    private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
+        String clientSessionId;
+        clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
+        LOGGER.info("Client Session Id from query param: {}", clientSessionId);
+        if (Objects.isNull(clientSessionId)) {
+            MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
+            if (!queryParameters.isEmpty()) {
+                List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
+                clientSessionId = queryParamSessionId.isEmpty() ? null : queryParamSessionId.get(0);
+            }
+        }
+        return clientSessionId;
     }
 
     private String getAuthenticatedAccountId(String clientSessionId) {
@@ -107,7 +132,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             String[] cookies = cookie.split(";");
             for (String c : cookies) {
                 if (c.trim().startsWith(key)) {
-                    System.out.println("c:" + c);
+                    LOGGER.debug("cookie :{}", c);
                     String[] keyValue = c.split("=");
                     return keyValue.length > 1 ? keyValue[1] : null;
                 }
@@ -168,7 +193,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             LOGGER.info("accountID {} ", accountIdByEmail);
             if (Objects.isNull(accountIdByEmail)) {
                 accountIdByEmail = accountManagerService.createAccount(email);
-                String sessionId = sessionManager.createSession(authorizationContext.getAuthorizedAccount().getAccountId());
+                String sessionId = sessionManager.createSession(accountIdByEmail);
                 tokenStore.saveSessionId(accountIdByEmail, sessionId);
             }
             return accountIdByEmail;

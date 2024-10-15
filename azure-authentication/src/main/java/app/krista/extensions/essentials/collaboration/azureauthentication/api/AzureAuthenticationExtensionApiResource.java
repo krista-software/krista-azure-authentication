@@ -1,8 +1,9 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 
+import app.krista.extension.impl.jaxrs.util.Resources;
+import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
-import app.krista.ksdk.authentication.SessionManager;
 import app.krista.ksdk.context.AuthorizationContext;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
@@ -10,17 +11,17 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Cookie;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.NewCookie;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.*;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.AUTHENTICATION_TYPE;
 import static com.github.scribejava.core.model.OAuthConstants.CODE;
 import static com.github.scribejava.core.model.OAuthConstants.STATE;
 import static javax.ws.rs.core.Cookie.DEFAULT_VERSION;
@@ -31,11 +32,40 @@ public class AzureAuthenticationExtensionApiResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureAuthenticationExtensionApiResource.class);
     private final AuthorizationContext authorizationContext;
     private final AzureAuthenticationTokenStore tokenStore;
+    private final AzureOAuthService azureOAuthService;
 
     @Inject
-    public AzureAuthenticationExtensionApiResource(AzureAuthenticationTokenStore tokenStore, AuthorizationContext authorizationContext) {
+    public AzureAuthenticationExtensionApiResource(AzureAuthenticationTokenStore tokenStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService) {
         this.authorizationContext = authorizationContext;
         this.tokenStore = tokenStore;
+        this.azureOAuthService = azureOAuthService;
+    }
+
+    @GET
+    @Path("authenticator.js")
+    public InputStream getAuthenticator() {
+        return getClass().getClassLoader().getResourceAsStream("authenticator.js");
+    }
+
+    @GET
+    @Path("/type")
+    public String getAuthType() {
+        return AUTHENTICATION_TYPE;
+    }
+
+    @OPTIONS
+    @Path("/login")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response loginOptions(@Context java.net.http.HttpHeaders headers, String email) {
+        return getResponseBuilderWithCORSHeaders().build();
+    }
+
+    @POST
+    @Path("/login")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response login(@Context java.net.http.HttpHeaders headers, String email) {
+        return getResponseBuilderWithCORSHeaders().entity(Map.of("authUrl", azureOAuthService.getAuthorizationURL())).build();
+
     }
 
     @GET
@@ -52,34 +82,26 @@ public class AzureAuthenticationExtensionApiResource {
                     .entity(resourceAsStream)
                     .build();
         }
+
         int maxAgeInSeconds = getMaxAgeInSeconds();
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
         String sessionId = tokenStore.getSessionId(authorizationContext.getAuthorizedAccount().getAccountId());
-       /* String chatbotSessionCookie = Constants.CHATBOT_SESSION_ID + Constants.EQUAL_TO + sessionId +
-                "; Version=" + DEFAULT_VERSION +
-                "; Comment=" + Constants.COMMENT +
-                "; Max-Age=" + maxAgeInSeconds +
-                "; Expires=" + expiry +
-                ";Secure;HttpOnly;SameSite=None;";*/
-
-       /* String kristaContextCookie =
-                Constants.X_KRISTA_CONTEXT + Constants.EQUAL_TO + getEncodedClientSessionId(sessionId) +
-                        "; Version=" + DEFAULT_VERSION +
-                        "; Comment=" + Constants.COMMENT +
-                        "; Max-Age=" + maxAgeInSeconds +
-                        "; Expires=" + expiry +
-                        ";Secure;HttpOnly;SameSite=None;";*/
-        // Building the response with CORS headers and cookie
-        NewCookie sessionCookie = new NewCookie(Constants.CHATBOT_SESSION_ID,
-                sessionId, "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
-        NewCookie xKristaContextCookie = new NewCookie(Constants.X_KRISTA_CONTEXT,
-                getEncodedClientSessionId(sessionId), "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
-        return getResponseBuilderWithCORSHeaders()
-                .cookie(sessionCookie)
-                .header(SET_COOKIE, xKristaContextCookie)
-                .header(Constants.CHATBOT_SESSION_ID, sessionId)
-                .entity(resourceAsStream)
-                .build();
+        try {
+            Response response = Resources.getTranslatedResource(getClass(),
+                    "index.html", Map.of("_clientSessionId_", sessionId));
+            NewCookie sessionCookie = new NewCookie(Constants.CHATBOT_SESSION_ID,
+                    sessionId, "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
+            NewCookie xKristaContextCookie = new NewCookie(Constants.X_KRISTA_CONTEXT,
+                    getEncodedClientSessionId(sessionId), "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
+            return getResponseBuilderWithCORSHeaders()
+                    .cookie(sessionCookie)
+                    .header(SET_COOKIE, xKristaContextCookie)
+                    .header(Constants.CHATBOT_SESSION_ID, sessionId)
+                    .entity(response.getEntity())
+                    .build();
+        } catch (IOException cause) {
+            throw new RuntimeException("error occurred while loading page", cause);
+        }
     }
 
     private String getEncodedClientSessionId(String sessionId) {

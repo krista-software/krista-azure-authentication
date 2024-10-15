@@ -10,4 +10,6 @@ public class Constants {
     public static final String COMMENT = "comment";
     public static final String COOKIE = "Cookie";
     public static final String EQUAL_TO = "=";
+    public static final String AUTHENTICATION_TYPE = "Azure Authentication";
+    public static final String CLIENT_SESSION_ID = "clientSessionId";
 }
