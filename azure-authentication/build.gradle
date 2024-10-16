@@ -40,11 +40,7 @@ dependencies {
     implementation 'org.glassfish.hk2:hk2-api:3.0.3'
     implementation "org.aspectj:aspectjrt:1.9.6"
     implementation 'com.microsoft.graph:microsoft-graph:5.76.0'
-    implementation 'com.microsoft.graph:microsoft-graph-auth:0.3.0'
-    implementation 'com.azure:azure-identity:1.11.0'
-    implementation 'com.github.scribejava:scribejava-apis:8.3.3'
-    implementation 'org.glassfish.jersey.media:jersey-media-multipart:2.35'
-    implementation 'org.jsoup:jsoup:1.16.1'
+    implementation 'com.microsoft.azure:msal4j:1.17.2'
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
     implementation 'com.kristasoft.common:common-test:1.0.43-rc1'
 }

@@ -16,8 +16,6 @@ import app.krista.ksdk.accounts.AccountProvider;
 import app.krista.ksdk.authentication.SessionManager;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.model.field.NamedField;
-import com.github.scribejava.core.model.OAuth2AccessToken;
-import org.jetbrains.annotations.Nullable;
 import org.jvnet.hk2.annotations.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +24,8 @@ import javax.inject.Inject;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.CLIENT_SESSION_ID;
 
@@ -89,9 +85,9 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         }
     }
 
-    private @Nullable String getClientSessionId(HttpRequest httpRequest) {
+    private String getClientSessionId(HttpRequest httpRequest) {
         String cookie = httpRequest.getHeader(Constants.COOKIE);
-        String clientSessionId = getCookie(cookie, CLIENT_SESSION_ID);
+        String clientSessionId = getCookie(cookie);
         if (Objects.isNull(clientSessionId)) {
             return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
         }
@@ -106,7 +102,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
             if (!queryParameters.isEmpty()) {
                 List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
-                clientSessionId = queryParamSessionId.isEmpty() ? null : queryParamSessionId.get(0);
+                clientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
             }
         }
         return clientSessionId;
@@ -127,11 +123,11 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         return null;
     }
 
-    private String getCookie(String cookie, String key) {
+    private String getCookie(String cookie) {
         if (!Objects.isNull(cookie)) {
             String[] cookies = cookie.split(";");
             for (String c : cookies) {
-                if (c.trim().startsWith(key)) {
+                if (c.trim().startsWith(CLIENT_SESSION_ID)) {
                     LOGGER.debug("cookie :{}", c);
                     String[] keyValue = c.split("=");
                     return keyValue.length > 1 ? keyValue[1] : null;
@@ -180,28 +176,15 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     }
 
     public String handleCallback(String code) {
-        LOGGER.debug("callback called");
-        try {
-            OAuth2AccessToken accessToken = azureOAuthService.getOAuth20Service().getAccessToken(code);
-            String refreshToken = accessToken.getRefreshToken();
-            LOGGER.debug("refreshToken= {}", refreshToken);
-            CompletableFuture<String> accessTokenFuture = CompletableFuture.completedFuture(accessToken.getAccessToken());
-            String email = userInfoService.getEmail(accessTokenFuture);
-            tokenStore.saveRefreshToken(email, refreshToken);
-            LOGGER.info("{} authenticated successfully", email);
-            String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
-            LOGGER.info("accountID {} ", accountIdByEmail);
-            if (Objects.isNull(accountIdByEmail)) {
-                accountIdByEmail = accountManagerService.createAccount(email);
-                String sessionId = sessionManager.createSession(accountIdByEmail);
-                tokenStore.saveSessionId(accountIdByEmail, sessionId);
-            }
-            return accountIdByEmail;
-        } catch (InterruptedException cause) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(cause);
-        } catch (IOException | ExecutionException cause) {
-            throw new RuntimeException(cause);
+        CompletableFuture<String> accessTokenFuture = azureOAuthService.getAccessTokenFuture(code);
+        String email = userInfoService.getEmail(accessTokenFuture);
+        LOGGER.info("{} authenticated successfully", email);
+        String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
+        if (Objects.isNull(accountIdByEmail)) {
+            accountIdByEmail = accountManagerService.createAccount(email);
+            String sessionId = sessionManager.createSession(accountIdByEmail);
+            tokenStore.saveSessionId(accountIdByEmail, sessionId);
         }
+        return accountIdByEmail;
     }
 }

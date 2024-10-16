@@ -1,6 +1,7 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 
 import app.krista.extension.impl.jaxrs.util.Resources;
+import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
@@ -21,9 +22,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.AUTHENTICATION_TYPE;
-import static com.github.scribejava.core.model.OAuthConstants.CODE;
-import static com.github.scribejava.core.model.OAuthConstants.STATE;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 import static javax.ws.rs.core.Cookie.DEFAULT_VERSION;
 import static javax.ws.rs.core.HttpHeaders.SET_COOKIE;
 
@@ -71,7 +70,6 @@ public class AzureAuthenticationExtensionApiResource {
     @GET
     @Path("/callback")
     public Response getCallbackResponse(@QueryParam(CODE) String code, @QueryParam(STATE) String state, @CookieParam(Constants.CHATBOT_SESSION_ID) Cookie sessionCookieInRequest) {
-        LOGGER.info("Received code: {} ", code);
         if (authorizationContext.getAuthorizedAccount() == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -100,7 +98,7 @@ public class AzureAuthenticationExtensionApiResource {
                     .entity(response.getEntity())
                     .build();
         } catch (IOException cause) {
-            throw new RuntimeException("error occurred while loading page", cause);
+            throw new FileOperationException("error occurred while loading page", cause);
         }
     }
 

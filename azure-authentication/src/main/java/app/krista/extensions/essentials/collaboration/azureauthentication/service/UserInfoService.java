@@ -10,7 +10,14 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class UserInfoService {
     public String getEmail(CompletableFuture<String> accessTokenFuture) {
-        GraphServiceClient<Request> graphClient = GraphServiceClient.builder().authenticationProvider(url -> accessTokenFuture).buildClient();
-        return Objects.requireNonNull(graphClient.me().buildRequest().get()).userPrincipalName;
+        GraphServiceClient<Request> graphClient = GraphServiceClient
+                .builder()
+                .authenticationProvider(url -> accessTokenFuture)
+                .buildClient();
+        return Objects.requireNonNull(graphClient
+                .me()
+                .buildRequest()
+                .get())
+                .userPrincipalName;
     }
 }

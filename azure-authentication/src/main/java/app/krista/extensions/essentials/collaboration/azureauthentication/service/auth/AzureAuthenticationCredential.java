@@ -5,12 +5,14 @@ public class AzureAuthenticationCredential {
     private final String clientSecret;
     private final String tenantId;
     private final String scope;
+    private final String redirectUrl;
 
-    public AzureAuthenticationCredential(String clientId, String clientSecret, String tenantId, String scope) {
+    public AzureAuthenticationCredential(String clientId, String clientSecret, String tenantId, String scope, String redirectUrl) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.tenantId = tenantId;
         this.scope = scope;
+        this.redirectUrl = redirectUrl;
     }
 
     public String getClientId() {
@@ -27,5 +29,13 @@ public class AzureAuthenticationCredential {
 
     public String getScope() {
         return scope;
+    }
+
+    public String getAuthority() {
+        return "https://login.microsoftonline.com/" + tenantId;
+    }
+
+    public String getRedirectUrl() {
+        return redirectUrl;
     }
 }

@@ -3,56 +3,74 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.servi
 import app.krista.extension.executor.Invoker;
 import app.krista.extension.request.RoutingInfo;
 import app.krista.extension.request.protos.http.HttpProtocol;
-import com.github.scribejava.apis.MicrosoftAzureActiveDirectory20Api;
-import com.github.scribejava.core.builder.ServiceBuilder;
-import com.github.scribejava.core.oauth.OAuth20Service;
-import com.microsoft.aad.msal4j.AuthorizationRequestUrlParameters;
-import com.microsoft.aad.msal4j.PublicClientApplication;
-import com.microsoft.aad.msal4j.ResponseMode;
+import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
+import com.microsoft.aad.msal4j.*;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
 
 import javax.inject.Inject;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashSet;
-
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.DEFAULT_CALLBACK_PATH;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 public class AzureOAuthService {
-    private OAuth20Service oAuth20Service;
+    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(AzureOAuthService.class);
+    private final ConfidentialClientApplication clientApplication;
+    private final AzureAuthenticationCredential azureAuthenticationCredential;
     private final RoutingInfo routingInfo;
+
+    public ConfidentialClientApplication getClientApplication() {
+        return clientApplication;
+    }
 
     @Inject
     public AzureOAuthService(Invoker invoker) {
+        this.azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder()
+                .redirectUrl(invoker.getRoutingInfo()).build();
+        this.clientApplication = buildClientApplication();
         this.routingInfo = invoker.getRoutingInfo();
-        this.oAuth20Service = getOAuth20Service();
     }
 
-    public synchronized OAuth20Service getOAuth20Service() {
-        if (oAuth20Service == null) {
-            AzureAuthenticationCredential credential = new AzureAuthenticationCredentialBuilder().build();
-            String routingUrl = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
-            routingUrl = routingUrl.replaceAll("/extension/api/.*", DEFAULT_CALLBACK_PATH);
-            oAuth20Service = new ServiceBuilder(credential.getClientId())
-                    .defaultScope(credential.getScope())
-                    .callback(routingUrl)
-                    .apiSecret(credential.getClientSecret())
-                    .build(MicrosoftAzureActiveDirectory20Api.custom(credential.getTenantId()));
+    private ConfidentialClientApplication buildClientApplication() {
+        try {
+            IClientCredential credential = ClientCredentialFactory.createFromSecret(azureAuthenticationCredential.getClientSecret());
+            return ConfidentialClientApplication
+                    .builder(azureAuthenticationCredential.getClientId(), credential)
+                    .authority(azureAuthenticationCredential.getAuthority())
+                    .build();
+        } catch (MalformedURLException cause) {
+            LOGGER.error("Error while creating client application", cause);
         }
-        return oAuth20Service;
+        return null;
     }
 
     public String getAuthorizationURL() {
-        System.out.println("called auth url");
+        Set<String> scopes = Arrays.stream(azureAuthenticationCredential.getScope().split(Constants.BLANK_SPACE)).collect(Collectors.toSet());
         String redirectURLState = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback";
-        redirectURLState += "#&access_type=offline&approval_prompt=force&prompt=select_account&forward=true";
-        return oAuth20Service.getAuthorizationUrl(redirectURLState);
+        redirectURLState += "#&access_type=offline&forward=true";
+        AuthorizationRequestUrlParameters authorizationRequestUrlParameters = AuthorizationRequestUrlParameters
+                .builder(azureAuthenticationCredential.getRedirectUrl(), scopes)
+                .responseMode(ResponseMode.QUERY)
+                .state(redirectURLState)
+                .prompt(Prompt.SELECT_ACCOUNT)
+                .build();
+        URL authorizationRequestUrl = clientApplication.getAuthorizationRequestUrl(authorizationRequestUrlParameters);
+        String urlString = authorizationRequestUrl.toString();
+        LOGGER.info("called auth url: {} and routingUrl: {}", urlString, azureAuthenticationCredential.getRedirectUrl());
+        return urlString;
+    }
+
+    public CompletableFuture<String> getAccessTokenFuture(String code) {
+        String redirectUrl = azureAuthenticationCredential.getRedirectUrl();
+        AuthorizationCodeParameters authorizationCodeParameters = AuthorizationCodeParameters.builder(code, URI.create(redirectUrl)).build();
+        CompletableFuture<IAuthenticationResult> iAuthCompletableFuture = clientApplication.acquireToken(authorizationCodeParameters);
+        IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
+        return CompletableFuture.completedFuture(iAuthenticationResult.accessToken());
     }
 }
