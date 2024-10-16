@@ -3,7 +3,6 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.servi
 import app.krista.extension.executor.Invoker;
 import app.krista.extension.request.RoutingInfo;
 import app.krista.extension.request.protos.http.HttpProtocol;
-import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import com.microsoft.aad.msal4j.*;
 import org.jvnet.hk2.annotations.Service;
 import org.slf4j.Logger;
@@ -13,10 +12,9 @@ import javax.inject.Inject;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 
 @Service
 public class AzureOAuthService {
@@ -25,13 +23,12 @@ public class AzureOAuthService {
     private final AzureAuthenticationCredential azureAuthenticationCredential;
     private final RoutingInfo routingInfo;
 
-    public ConfidentialClientApplication getClientApplication() {
-        return clientApplication;
-    }
-
     @Inject
     public AzureOAuthService(Invoker invoker) {
         this.azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder()
+                .clientId((String) invoker.getAttributes().get(CLIENT_ID))
+                .clientSecret((String) invoker.getAttributes().get(CLIENT_SECRET))
+                .tenantId((String) invoker.getAttributes().get(TENANT_ID))
                 .redirectUrl(invoker.getRoutingInfo()).build();
         this.clientApplication = buildClientApplication();
         this.routingInfo = invoker.getRoutingInfo();
@@ -51,18 +48,17 @@ public class AzureOAuthService {
     }
 
     public String getAuthorizationURL() {
-        Set<String> scopes = Arrays.stream(azureAuthenticationCredential.getScope().split(Constants.BLANK_SPACE)).collect(Collectors.toSet());
         String redirectURLState = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback";
         redirectURLState += "#&access_type=offline&forward=true";
         AuthorizationRequestUrlParameters authorizationRequestUrlParameters = AuthorizationRequestUrlParameters
-                .builder(azureAuthenticationCredential.getRedirectUrl(), scopes)
+                .builder(azureAuthenticationCredential.getRedirectUrl(), azureAuthenticationCredential.getScopes())
                 .responseMode(ResponseMode.QUERY)
                 .state(redirectURLState)
                 .prompt(Prompt.SELECT_ACCOUNT)
                 .build();
         URL authorizationRequestUrl = clientApplication.getAuthorizationRequestUrl(authorizationRequestUrlParameters);
         String urlString = authorizationRequestUrl.toString();
-        LOGGER.info("called auth url: {} and routingUrl: {}", urlString, azureAuthenticationCredential.getRedirectUrl());
+        LOGGER.debug("called auth url: {} and routingUrl: {}", urlString, azureAuthenticationCredential.getRedirectUrl());
         return urlString;
     }
 

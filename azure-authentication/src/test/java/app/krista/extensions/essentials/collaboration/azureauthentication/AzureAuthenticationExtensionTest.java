@@ -1,7 +1,5 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication;
 
-import app.krista.extension.request.RoutingInfo;
-import app.krista.extension.request.protos.http.HttpProtocol;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureAuthenticationCredential;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureAuthenticationCredentialBuilder;
 import com.microsoft.aad.msal4j.*;
@@ -10,22 +8,16 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.BLANK_SPACE;
 
 public class AzureAuthenticationExtensionTest {
     @Test
     public void getAuthorizationUrl() throws MalformedURLException {
-        AzureAuthenticationCredential azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder().build();
-        Set<String> scopes = Arrays.stream(azureAuthenticationCredential.getScope().split(BLANK_SPACE)).collect(Collectors.toSet());
+        AzureAuthenticationCredential azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder().buildCredentialFromProperties();
         String routingUrl = "http://localhost:8765/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e";
         String redirectURLState = routingUrl + "/authn/callback";
         redirectURLState += "#&access_type=offline&forward=true";
         AuthorizationRequestUrlParameters authorizationRequestUrlParameters = AuthorizationRequestUrlParameters
-                .builder("http://localhost:8765/extension/api/authn/callback", scopes)
+                .builder("http://localhost:8765/extension/api/authn/callback", azureAuthenticationCredential.getScopes())
                 .responseMode(ResponseMode.QUERY)
                 .state(redirectURLState)
                 .prompt(Prompt.SELECT_ACCOUNT)
@@ -36,7 +28,7 @@ public class AzureAuthenticationExtensionTest {
                 .authority(azureAuthenticationCredential.getAuthority())
                 .build();
         URL authorizationRequestUrl = build.getAuthorizationRequestUrl(authorizationRequestUrlParameters);
-        System.out.println("url:"+authorizationRequestUrl.toString());
+        System.out.println("url:" + authorizationRequestUrl.toString());
         Assert.assertNotNull(authorizationRequestUrl);
     }
 }

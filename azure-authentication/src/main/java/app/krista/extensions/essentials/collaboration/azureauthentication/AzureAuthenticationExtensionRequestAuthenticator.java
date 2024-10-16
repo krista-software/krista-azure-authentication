@@ -67,74 +67,21 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         try {
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
-            LOGGER.info("path {}", path);
+            LOGGER.debug("path {}", path);
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
-                LOGGER.info("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
+                LOGGER.debug("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
                 return handleCallback(code.get(0));
             }
             String clientSessionId = getClientSessionId(httpRequest);
             if (!Objects.isNull(clientSessionId)) {
-                String authenticatedAccountId = getAuthenticatedAccountId(clientSessionId);
-                if (authenticatedAccountId != null) return authenticatedAccountId;
+                return getAuthenticatedAccountId(clientSessionId);
             }
             return null;
         } catch (Exception cause) {
             throw new IllegalStateException("Failed to authenticate : Reason: " + cause.getMessage(), cause);
         }
-    }
-
-    private String getClientSessionId(HttpRequest httpRequest) {
-        String cookie = httpRequest.getHeader(Constants.COOKIE);
-        String clientSessionId = getCookie(cookie);
-        if (Objects.isNull(clientSessionId)) {
-            return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
-        }
-        return clientSessionId;
-    }
-
-    private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
-        String clientSessionId;
-        clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
-        LOGGER.info("Client Session Id from query param: {}", clientSessionId);
-        if (Objects.isNull(clientSessionId)) {
-            MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
-            if (!queryParameters.isEmpty()) {
-                List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
-                clientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
-            }
-        }
-        return clientSessionId;
-    }
-
-    private String getAuthenticatedAccountId(String clientSessionId) {
-        String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
-        if (!Objects.isNull(authenticatedAccountId)) {
-            try {
-                accountProvider.getAccount(authenticatedAccountId);
-                LOGGER.info("Got Authenticated AccountId: {}", authenticatedAccountId);
-                return authenticatedAccountId;
-            } catch (NoSuchElementException cause) {
-                LOGGER.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
-            }
-        }
-        LOGGER.info("No account found for clientSessionId: {}", clientSessionId);
-        return null;
-    }
-
-    private String getCookie(String cookie) {
-        if (!Objects.isNull(cookie)) {
-            String[] cookies = cookie.split(";");
-            for (String c : cookies) {
-                if (c.trim().startsWith(CLIENT_SESSION_ID)) {
-                    LOGGER.debug("cookie :{}", c);
-                    String[] keyValue = c.split("=");
-                    return keyValue.length > 1 ? keyValue[1] : null;
-                }
-            }
-        }
-        return null;
     }
 
     @Override
@@ -175,11 +122,64 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         return new AuthorizationResponse(azureOAuthService.getAuthorizationURL(), List.of());
     }
 
+    private String getClientSessionId(HttpRequest httpRequest) {
+        String cookie = httpRequest.getHeader(Constants.COOKIE);
+        String clientSessionId = getCookie(cookie);
+        if (Objects.isNull(clientSessionId)) {
+            return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
+        }
+        return clientSessionId;
+    }
+
+    private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
+        String clientSessionId;
+        clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
+        LOGGER.debug("Client Session Id from query param: {}", clientSessionId);
+        if (Objects.isNull(clientSessionId)) {
+            MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
+            if (!queryParameters.isEmpty()) {
+                List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
+                clientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
+            }
+        }
+        return clientSessionId;
+    }
+
+    private String getAuthenticatedAccountId(String clientSessionId) {
+        String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
+        if (!Objects.isNull(authenticatedAccountId)) {
+            try {
+                accountProvider.getAccount(authenticatedAccountId);
+                LOGGER.info("Got Authenticated AccountId: {}", authenticatedAccountId);
+                return authenticatedAccountId;
+            } catch (NoSuchElementException cause) {
+                LOGGER.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
+            }
+        }
+        LOGGER.debug("No account found for clientSessionId: {}", clientSessionId);
+        return null;
+    }
+
+    private String getCookie(String cookie) {
+        if (!Objects.isNull(cookie)) {
+            String[] cookies = cookie.split(";");
+            for (String c : cookies) {
+                if (c.trim().startsWith(CLIENT_SESSION_ID)) {
+                    LOGGER.debug("cookie :{}", c);
+                    String[] keyValue = c.split("=");
+                    return keyValue.length > 1 ? keyValue[1] : null;
+                }
+            }
+        }
+        return null;
+    }
+
     public String handleCallback(String code) {
         CompletableFuture<String> accessTokenFuture = azureOAuthService.getAccessTokenFuture(code);
         String email = userInfoService.getEmail(accessTokenFuture);
         LOGGER.info("{} authenticated successfully", email);
         String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
+        tokenStore.saveAccessToken(email, accessTokenFuture.join());
         if (Objects.isNull(accountIdByEmail)) {
             accountIdByEmail = accountManagerService.createAccount(email);
             String sessionId = sessionManager.createSession(accountIdByEmail);

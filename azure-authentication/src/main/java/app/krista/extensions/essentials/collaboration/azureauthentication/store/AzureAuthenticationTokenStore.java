@@ -19,12 +19,12 @@ public class AzureAuthenticationTokenStore {
         return keyValueStore.get(key);
     }
 
-    public String getRefreshToken(String email) {
+    public String getAccessToken(String email) {
         return (String) this.get(getRefreshTokenKey(email));
     }
 
     private String getRefreshTokenKey(String email) {
-        return "refresh_token_" + email;
+        return "access_token_" + email;
     }
 
     public void removeRefreshToken(String email) {
@@ -36,14 +36,14 @@ public class AzureAuthenticationTokenStore {
     }
 
     public boolean doesRefreshTokenExist(String email) {
-        return this.contains(getRefreshToken(email));
+        return this.contains(getAccessToken(email));
     }
 
     private boolean contains(String key) {
         return keyValueStore.contains(key);
     }
 
-    public void saveRefreshToken(String email, String refreshToken) {
+    public void saveAccessToken(String email, String refreshToken) {
         this.put(getRefreshTokenKey(email), refreshToken);
     }
 
