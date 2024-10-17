@@ -7,6 +7,8 @@ import app.krista.extension.request.ProtoRequest;
 import app.krista.extension.request.ProtoResponse;
 import app.krista.extension.request.protos.http.HttpRequest;
 import app.krista.extension.request.protos.http.HttpResponse;
+import app.krista.extensions.essentials.collaboration.azureauthentication.exception.ExceptionFieldsExtractor;
+import app.krista.extensions.essentials.collaboration.azureauthentication.exception.MustAuthorizeExceptionExtractor;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.AccountManagerService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
@@ -27,7 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.CLIENT_SESSION_ID;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 
 @Service
 public class AzureAuthenticationExtensionRequestAuthenticator implements RequestAuthenticator {
@@ -118,8 +120,10 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     }
 
     @Override
-    public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException e) {
-        return new AuthorizationResponse(azureOAuthService.getAuthorizationURL(), List.of());
+    public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException cause) {
+        ExceptionFieldsExtractor exceptionFieldsExtractor = new MustAuthorizeExceptionExtractor(cause);
+        Map<String, String> fields = exceptionFieldsExtractor.getFields();
+        return new AuthorizationResponse(azureOAuthService.getAuthorizationUrlForFields(fields), List.of());
     }
 
     private String getClientSessionId(HttpRequest httpRequest) {

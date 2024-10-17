@@ -9,12 +9,13 @@ import org.slf4j.Logger;
 
 import javax.inject.Inject;
 
+import java.lang.reflect.MalformedParametersException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AzureOAuthService {
@@ -25,16 +26,16 @@ public class AzureOAuthService {
 
     @Inject
     public AzureOAuthService(Invoker invoker) {
-        this.azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder()
-                .clientId((String) invoker.getAttributes().get(CLIENT_ID))
-                .clientSecret((String) invoker.getAttributes().get(CLIENT_SECRET))
-                .tenantId((String) invoker.getAttributes().get(TENANT_ID))
-                .redirectUrl(invoker.getRoutingInfo()).build();
-        this.clientApplication = buildClientApplication();
         this.routingInfo = invoker.getRoutingInfo();
+        Map<String, String> attributes = invoker.getAttributes()
+                .entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> (String) entry.getValue()));
+        String routingURL = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
+        this.azureAuthenticationCredential = new AzureAuthenticationCredentialBuilder()
+                .routingUrl(routingURL).build(attributes);
+        this.clientApplication = buildClientApplication(azureAuthenticationCredential);
     }
 
-    private ConfidentialClientApplication buildClientApplication() {
+    private ConfidentialClientApplication buildClientApplication(AzureAuthenticationCredential azureAuthenticationCredential) {
         try {
             IClientCredential credential = ClientCredentialFactory.createFromSecret(azureAuthenticationCredential.getClientSecret());
             return ConfidentialClientApplication
@@ -42,23 +43,19 @@ public class AzureOAuthService {
                     .authority(azureAuthenticationCredential.getAuthority())
                     .build();
         } catch (MalformedURLException cause) {
-            LOGGER.error("Error while creating client application", cause);
+            throw new MalformedParametersException("error while construction authorization url: " + cause.getMessage());
         }
-        return null;
     }
 
     public String getAuthorizationURL() {
-        String redirectURLState = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE) + "/authn/callback";
-        redirectURLState += "#&access_type=offline&forward=true";
-        AuthorizationRequestUrlParameters authorizationRequestUrlParameters = AuthorizationRequestUrlParameters
-                .builder(azureAuthenticationCredential.getRedirectUrl(), azureAuthenticationCredential.getScopes())
-                .responseMode(ResponseMode.QUERY)
-                .state(redirectURLState)
-                .prompt(Prompt.SELECT_ACCOUNT)
+        return getAuthorizationUrlForCredential(azureAuthenticationCredential, clientApplication);
+    }
+
+    private String getAuthorizationUrlForCredential(AzureAuthenticationCredential azureAuthenticationCredential, ConfidentialClientApplication clientApplication) {
+        URL authorizationRequestUrl = new AzureAuthorizationUrlBuilder(azureAuthenticationCredential, clientApplication)
                 .build();
-        URL authorizationRequestUrl = clientApplication.getAuthorizationRequestUrl(authorizationRequestUrlParameters);
         String urlString = authorizationRequestUrl.toString();
-        LOGGER.debug("called auth url: {} and routingUrl: {}", urlString, azureAuthenticationCredential.getRedirectUrl());
+        LOGGER.debug("called auth url: {} and routingUrl: {}", urlString, azureAuthenticationCredential.getRoutingUrl());
         return urlString;
     }
 
@@ -68,5 +65,14 @@ public class AzureOAuthService {
         CompletableFuture<IAuthenticationResult> iAuthCompletableFuture = clientApplication.acquireToken(authorizationCodeParameters);
         IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
         return CompletableFuture.completedFuture(iAuthenticationResult.accessToken());
+    }
+
+    public String getAuthorizationUrlForFields(Map<String, String> fields) {
+        String routingURL = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
+        AzureAuthenticationCredential authenticationCredential = new AzureAuthenticationCredentialBuilder()
+                .routingUrl(routingURL)
+                .build(fields);
+        ConfidentialClientApplication confidentialClientApplication = buildClientApplication(authenticationCredential);
+        return getAuthorizationUrlForCredential(authenticationCredential, confidentialClientApplication);
     }
 }

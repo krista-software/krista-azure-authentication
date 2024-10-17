@@ -1,19 +1,13 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.service.auth;
 
-import app.krista.extension.request.RoutingInfo;
-import app.krista.extension.request.protos.http.HttpProtocol;
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.BLANK_SPACE;
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.DEFAULT_CALLBACK_PATH;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 
 public class AzureAuthenticationCredentialBuilder {
     private String clientId;
@@ -37,9 +31,8 @@ public class AzureAuthenticationCredentialBuilder {
         return this;
     }
 
-    public AzureAuthenticationCredentialBuilder redirectUrl(RoutingInfo routingInfo) {
-        String originalRoutingUrl = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
-        this.routingUrl = originalRoutingUrl.replaceAll("/extension/api/.*", DEFAULT_CALLBACK_PATH);
+    public AzureAuthenticationCredentialBuilder routingUrl(String routingUrl) {
+        this.routingUrl = routingUrl;
         return this;
     }
 
@@ -61,5 +54,13 @@ public class AzureAuthenticationCredentialBuilder {
     public AzureAuthenticationCredential build() {
         scopes.add("User.Read");
         return new AzureAuthenticationCredential(clientId, clientSecret, tenantId, scopes, routingUrl);
+    }
+
+    public AzureAuthenticationCredential build(Map<String, String> attributes) {
+        String clientIdAttribute = attributes.get(CLIENT_ID);
+        String clientSecretAttribute = attributes.get(CLIENT_SECRET);
+        String tenantIdAttribute = attributes.get(TENANT_ID);
+        scopes.add("User.Read");
+        return new AzureAuthenticationCredential(clientIdAttribute, clientSecretAttribute, tenantIdAttribute, scopes, routingUrl);
     }
 }
