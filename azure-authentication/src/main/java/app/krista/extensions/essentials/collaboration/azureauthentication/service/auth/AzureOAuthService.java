@@ -35,20 +35,25 @@ public class AzureOAuthService {
         this.clientApplication = buildClientApplication(azureAuthenticationCredential);
     }
 
-    private ConfidentialClientApplication buildClientApplication(AzureAuthenticationCredential azureAuthenticationCredential) {
-        try {
-            IClientCredential credential = ClientCredentialFactory.createFromSecret(azureAuthenticationCredential.getClientSecret());
-            return ConfidentialClientApplication
-                    .builder(azureAuthenticationCredential.getClientId(), credential)
-                    .authority(azureAuthenticationCredential.getAuthority())
-                    .build();
-        } catch (MalformedURLException cause) {
-            throw new MalformedParametersException("error while construction authorization url: " + cause.getMessage());
-        }
+    public CompletableFuture<String> getAccessTokenFuture(String code) {
+        String redirectUrl = azureAuthenticationCredential.getRedirectUrl();
+        AuthorizationCodeParameters authorizationCodeParameters = AuthorizationCodeParameters.builder(code, URI.create(redirectUrl)).build();
+        CompletableFuture<IAuthenticationResult> iAuthCompletableFuture = clientApplication.acquireToken(authorizationCodeParameters);
+        IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
+        return CompletableFuture.completedFuture(iAuthenticationResult.accessToken());
     }
 
     public String getAuthorizationURL() {
         return getAuthorizationUrlForCredential(azureAuthenticationCredential, clientApplication);
+    }
+
+    public String getAuthorizationUrlForFields(Map<String, String> fields) {
+        String routingURL = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
+        AzureAuthenticationCredential authenticationCredential = new AzureAuthenticationCredentialBuilder()
+                .routingUrl(routingURL)
+                .build(fields);
+        ConfidentialClientApplication confidentialClientApplication = buildClientApplication(authenticationCredential);
+        return getAuthorizationUrlForCredential(authenticationCredential, confidentialClientApplication);
     }
 
     private String getAuthorizationUrlForCredential(AzureAuthenticationCredential azureAuthenticationCredential, ConfidentialClientApplication clientApplication) {
@@ -59,20 +64,15 @@ public class AzureOAuthService {
         return urlString;
     }
 
-    public CompletableFuture<String> getAccessTokenFuture(String code) {
-        String redirectUrl = azureAuthenticationCredential.getRedirectUrl();
-        AuthorizationCodeParameters authorizationCodeParameters = AuthorizationCodeParameters.builder(code, URI.create(redirectUrl)).build();
-        CompletableFuture<IAuthenticationResult> iAuthCompletableFuture = clientApplication.acquireToken(authorizationCodeParameters);
-        IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
-        return CompletableFuture.completedFuture(iAuthenticationResult.accessToken());
-    }
-
-    public String getAuthorizationUrlForFields(Map<String, String> fields) {
-        String routingURL = routingInfo.getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
-        AzureAuthenticationCredential authenticationCredential = new AzureAuthenticationCredentialBuilder()
-                .routingUrl(routingURL)
-                .build(fields);
-        ConfidentialClientApplication confidentialClientApplication = buildClientApplication(authenticationCredential);
-        return getAuthorizationUrlForCredential(authenticationCredential, confidentialClientApplication);
+    private ConfidentialClientApplication buildClientApplication(AzureAuthenticationCredential azureAuthenticationCredential) {
+        try {
+            IClientCredential credential = ClientCredentialFactory.createFromSecret(azureAuthenticationCredential.getClientSecret());
+            return ConfidentialClientApplication
+                    .builder(azureAuthenticationCredential.getClientId(), credential)
+                    .authority(azureAuthenticationCredential.getAuthority())
+                    .build();
+        } catch (MalformedURLException cause) {
+            throw new MalformedParametersException("error while construction authorization url: " + cause.getMessage());
+        }
     }
 }

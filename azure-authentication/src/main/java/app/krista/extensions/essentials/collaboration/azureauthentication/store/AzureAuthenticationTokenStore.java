@@ -20,22 +20,22 @@ public class AzureAuthenticationTokenStore {
     }
 
     public String getAccessToken(String email) {
-        return (String) this.get(getRefreshTokenKey(email));
+        return (String) this.get(getAccessTokenKey(email));
     }
 
-    private String getRefreshTokenKey(String email) {
+    private String getAccessTokenKey(String email) {
         return "access_token_" + email;
     }
 
-    public void removeRefreshToken(String email) {
-        this.remove(getRefreshTokenKey(email));
+    public void removeAccessToken(String email) {
+        this.remove(getAccessTokenKey(email));
     }
 
     private void remove(String key) {
         keyValueStore.remove(key);
     }
 
-    public boolean doesRefreshTokenExist(String email) {
+    public boolean doesAccessTokenExist(String email) {
         return this.contains(getAccessToken(email));
     }
 
@@ -44,7 +44,7 @@ public class AzureAuthenticationTokenStore {
     }
 
     public void saveAccessToken(String email, String refreshToken) {
-        this.put(getRefreshTokenKey(email), refreshToken);
+        this.put(getAccessTokenKey(email), refreshToken);
     }
 
     private void put(String key, Object value) {
