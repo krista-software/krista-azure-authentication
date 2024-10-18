@@ -25,8 +25,11 @@
   that would be display name. Select the **Supported account types**. Out of the available options, select accounts in
   the single tenant only (first option).
 
-* Under Redirect URI, select the Web platform. Add the authorized redirect URI
-  corresponding to your Outlook extension which you have copied from Details tab. Click **Register**.
+* Under Redirect URI, select the Web platform and add the authorized redirect URI for your Azure extension. To do this, copy the routing URL from the Invoker's Details tab and replace the routing ID in the URL with /authn/v3/oauth/callback.
+For example, if the routing URL from the Details tab is https://extension.qa-in.eng.krista.app/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e, where **FwoDdIazmBVeU4DRo0F_sdQ_e_e** is the routing ID, the updated redirect URI will be:
+https://extension.qa-in.eng.krista.app/extension/api/authn/v3/oauth/callback.
+* Finally, click Register.
+
   ![Authorized redirect uri Reference](../_media/authorizedRedirectURIReference.png)
 
 
