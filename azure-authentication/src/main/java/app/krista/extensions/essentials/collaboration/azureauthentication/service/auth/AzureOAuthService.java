@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class AzureOAuthService {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(AzureOAuthService.class);
     private final Invoker invoker;
+    private Map<String, String> attributes;
 
     @Inject
     public AzureOAuthService(Invoker invoker) {
@@ -28,20 +29,21 @@ public class AzureOAuthService {
     }
 
     private AzureAuthenticationCredential getAzureAuthenticationCredential() {
-        Map<String, String> attributes = invoker.getAttributes()
-                .entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> (String) entry.getValue()));
         String routingURL = invoker.getRoutingInfo().getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
         return new AzureAuthenticationCredentialBuilder()
                 .routingUrl(routingURL).build(attributes);
     }
 
     public String getAuthorizationURL() {
+        this.attributes = invoker.getAttributes()
+                .entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> (String) entry.getValue()));
         AzureAuthenticationCredential azureAuthenticationCredential = getAzureAuthenticationCredential();
         ConfidentialClientApplication clientApplication = buildClientApplication(azureAuthenticationCredential);
         return getAuthorizationUrlForCredential(azureAuthenticationCredential, clientApplication);
     }
 
     public String getAuthorizationUrlForFields(Map<String, String> fields) {
+        this.attributes = fields;
         String routingURL = invoker.getRoutingInfo().getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
         AzureAuthenticationCredential authenticationCredential = new AzureAuthenticationCredentialBuilder()
                 .routingUrl(routingURL)

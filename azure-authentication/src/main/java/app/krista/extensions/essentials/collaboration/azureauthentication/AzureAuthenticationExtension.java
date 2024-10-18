@@ -5,7 +5,7 @@ import app.krista.extension.authorization.RequestAuthenticator;
 import app.krista.extension.executor.Invoker;
 import app.krista.extension.impl.anno.*;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
-import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.context.AuthorizationContext;
@@ -39,15 +39,15 @@ public class AzureAuthenticationExtension {
     private final RequestAuthenticator requestAuthenticator;
     private final Invoker invoker;
     private final AuthorizationContext authorizationContext;
-    private final AzureAuthenticationTokenStore tokenStore;
+    private final OauthSessionStore oauthSessionStore;
     private final UserInfoService userInfoService;
 
     @Inject
-    public AzureAuthenticationExtension(AzureAuthenticationExtensionRequestAuthenticator requestAuthenticator, Invoker invoker, AuthorizationContext authorizationContext, AzureAuthenticationTokenStore tokenStore, UserInfoService userInfoService) {
+    public AzureAuthenticationExtension(AzureAuthenticationExtensionRequestAuthenticator requestAuthenticator, Invoker invoker, AuthorizationContext authorizationContext, OauthSessionStore oauthSessionStore, UserInfoService userInfoService) {
         this.requestAuthenticator = requestAuthenticator;
         this.invoker = invoker;
         this.authorizationContext = authorizationContext;
-        this.tokenStore = tokenStore;
+        this.oauthSessionStore = oauthSessionStore;
         this.userInfoService = userInfoService;
     }
 
@@ -58,11 +58,15 @@ public class AzureAuthenticationExtension {
 
     @InvokerRequest(InvokerRequest.Type.VALIDATE_ATTRIBUTES)
     public void validateAttributes(Map<String, String> attributes) {
+        if (Objects.isNull(invoker.getAttributes()) || invoker.getAttributes().isEmpty()) {
+            return;
+        }
         String clientId = attributes.get(CLIENT_ID);
         String clientSecret = attributes.get(CLIENT_SECRET);
         String tenantId = attributes.get(TENANT_ID);
         Account authorizedAccount = authorizationContext.getAuthorizedAccount();
-        String accessToken = tokenStore.getAccessToken(authorizedAccount.getPrimaryEmailAddress());
+        String accessToken = oauthSessionStore.getAccessToken(authorizedAccount.getPrimaryEmailAddress());
+        oauthSessionStore.saveInvokerAttributes(attributes);
         if (Objects.isNull(accessToken)) {
             NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, "Text", clientId, Map.of(), Map.of());
             NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, "Text", clientSecret, Map.of(), Map.of());
@@ -75,6 +79,9 @@ public class AzureAuthenticationExtension {
 
     @InvokerRequest(InvokerRequest.Type.TEST_CONNECTION)
     public void testConnection() {
+        if (Objects.isNull(invoker.getAttributes()) || invoker.getAttributes().isEmpty()) {
+            return;
+        }
         Map<String, String> attributesMap = invoker
                 .getAttributes()
                 .entrySet()

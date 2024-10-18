@@ -45,7 +45,7 @@ public class AzureAuthenticationCredentialBuilder {
             String tId = properties.getProperty("tenantId");
             String scope = properties.getProperty("scope");
             Set<String> scps = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());
-            return new AzureAuthenticationCredential(cId, cSecret, tId, scps, routingUrl);
+            return new AzureAuthenticationCredential(new OAuthCredentialImpl(cId, cSecret, tId), scps, routingUrl);
         } catch (IOException cause) {
             throw new FileOperationException("Failed to load public configuration file.", cause);
         }
@@ -53,7 +53,7 @@ public class AzureAuthenticationCredentialBuilder {
 
     public AzureAuthenticationCredential build() {
         scopes.add("User.Read");
-        return new AzureAuthenticationCredential(clientId, clientSecret, tenantId, scopes, routingUrl);
+        return new AzureAuthenticationCredential(new OAuthCredentialImpl(clientId, clientSecret, tenantId), scopes, routingUrl);
     }
 
     public AzureAuthenticationCredential build(Map<String, String> attributes) {
@@ -61,6 +61,6 @@ public class AzureAuthenticationCredentialBuilder {
         String clientSecretAttribute = attributes.get(CLIENT_SECRET);
         String tenantIdAttribute = attributes.get(TENANT_ID);
         scopes.add("User.Read");
-        return new AzureAuthenticationCredential(clientIdAttribute, clientSecretAttribute, tenantIdAttribute, scopes, routingUrl);
+        return new AzureAuthenticationCredential(new OAuthCredentialImpl(clientIdAttribute, clientSecretAttribute, tenantIdAttribute), scopes, routingUrl);
     }
 }

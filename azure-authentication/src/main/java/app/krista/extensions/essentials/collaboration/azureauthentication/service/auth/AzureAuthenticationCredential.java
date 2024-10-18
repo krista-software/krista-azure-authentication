@@ -7,26 +7,22 @@ import java.util.Set;
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.DEFAULT_CALLBACK_PATH;
 
 public class AzureAuthenticationCredential {
-    private final String clientId;
-    private final String clientSecret;
-    private final String tenantId;
+    private final OAuthCredential oAuthCredential;
     private final Set<String> scopes;
     private final String routingUrl;
 
-    public AzureAuthenticationCredential(String clientId, String clientSecret, String tenantId, Set<String> scopes, String routingUrl) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.tenantId = tenantId;
+    public AzureAuthenticationCredential(OAuthCredential oAuthCredential, Set<String> scopes, String routingUrl) {
+        this.oAuthCredential = oAuthCredential;
         this.scopes = scopes;
         this.routingUrl = routingUrl;
     }
 
     public String getClientId() {
-        return clientId;
+        return oAuthCredential.getClientId();
     }
 
     public String getClientSecret() {
-        return clientSecret;
+        return oAuthCredential.getClientSecret();
     }
 
     public Set<String> getScopes() {
@@ -35,8 +31,8 @@ public class AzureAuthenticationCredential {
 
     public String getAuthority(String... tenantId) {
         String baseAuthorityUrl = "https://login.microsoftonline.com/";
-        if (Objects.isNull(tenantId) || tenantId.length==0) {
-            return baseAuthorityUrl + this.tenantId;
+        if (Objects.isNull(tenantId) || tenantId.length == 0) {
+            return baseAuthorityUrl + this.oAuthCredential.getTenantId();
         }
         return baseAuthorityUrl + tenantId[0];
     }

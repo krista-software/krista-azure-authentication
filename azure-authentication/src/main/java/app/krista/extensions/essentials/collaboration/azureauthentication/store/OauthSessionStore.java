@@ -1,18 +1,24 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.store;
 
 import app.krista.extensions.util.KeyValueStore;
+import app.krista.model.field.util.GsonJsonMapper;
+import app.krista.model.field.util.JavaTypes;
+import app.krista.omni.sdk.spi.util.GsonJsonMapperImpl;
 import org.jvnet.hk2.annotations.Service;
 
 import javax.inject.Inject;
+import java.util.Map;
 import java.util.Set;
 
 @Service
-public class AzureAuthenticationTokenStore {
+public class OauthSessionStore {
     private final KeyValueStore keyValueStore;
+    private final GsonJsonMapper gsonJsonMapper;
 
     @Inject
-    public AzureAuthenticationTokenStore(KeyValueStore keyValueStore) {
+    public OauthSessionStore(KeyValueStore keyValueStore) {
         this.keyValueStore = keyValueStore;
+        this.gsonJsonMapper = GsonJsonMapperImpl.getInstance();
     }
 
     private Object get(String key) {
@@ -65,5 +71,17 @@ public class AzureAuthenticationTokenStore {
 
     public String getSessionId(String accountId) {
         return (String) keyValueStore.get(getSessionKey(accountId));
+    }
+
+    public void saveInvokerAttributes(Map<String, String> invokerAttributes) {
+        keyValueStore.put(toOauthKey(), gsonJsonMapper.toString(invokerAttributes));
+    }
+
+    public Map<String, String> getInvokerAttributes() {
+        return gsonJsonMapper.fromString(keyValueStore.get(toOauthKey()).toString(), JavaTypes.getTypedClass(Map.class, String.class, String.class));
+    }
+
+    private String toOauthKey() {
+        return "OAuthKey"; //NOSONAR
     }
 }

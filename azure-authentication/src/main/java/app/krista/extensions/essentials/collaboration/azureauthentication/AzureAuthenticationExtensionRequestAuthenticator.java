@@ -7,12 +7,10 @@ import app.krista.extension.request.ProtoRequest;
 import app.krista.extension.request.ProtoResponse;
 import app.krista.extension.request.protos.http.HttpRequest;
 import app.krista.extension.request.protos.http.HttpResponse;
-import app.krista.extensions.essentials.collaboration.azureauthentication.exception.ExceptionFieldsExtractor;
-import app.krista.extensions.essentials.collaboration.azureauthentication.exception.MustAuthorizeExceptionExtractor;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.AccountManagerService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
-import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.AccountProvider;
 import app.krista.ksdk.authentication.SessionManager;
@@ -33,20 +31,20 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
 
 @Service
 public class AzureAuthenticationExtensionRequestAuthenticator implements RequestAuthenticator {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AzureAuthenticationExtensionRequestAuthenticator.class);
+    private static final Logger logger = LoggerFactory.getLogger(AzureAuthenticationExtensionRequestAuthenticator.class);
     private final AuthorizationContext authorizationContext;
     private final UserInfoService userInfoService;
-    private final AzureAuthenticationTokenStore tokenStore;
+    private final OauthSessionStore oauthSessionStore;
     private final AccountManagerService accountManagerService;
     private final AzureOAuthService azureOAuthService;
     private final SessionManager sessionManager;
     private final AccountProvider accountProvider;
 
     @Inject
-    public AzureAuthenticationExtensionRequestAuthenticator(AuthorizationContext authorizationContext, UserInfoService userInfoService, AzureAuthenticationTokenStore tokenStore, AccountManagerService accountManagerService, AzureOAuthService azureOAuthService, SessionManager sessionManager, AccountProvider accountProvider) {
+    public AzureAuthenticationExtensionRequestAuthenticator(AuthorizationContext authorizationContext, UserInfoService userInfoService, OauthSessionStore oauthSessionStore, AccountManagerService accountManagerService, AzureOAuthService azureOAuthService, SessionManager sessionManager, AccountProvider accountProvider) {
         this.authorizationContext = authorizationContext;
         this.userInfoService = userInfoService;
-        this.tokenStore = tokenStore;
+        this.oauthSessionStore = oauthSessionStore;
         this.accountManagerService = accountManagerService;
         this.azureOAuthService = azureOAuthService;
         this.sessionManager = sessionManager;
@@ -69,11 +67,11 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         try {
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
-            LOGGER.debug("path {}", path);
+            logger.debug("path {}", path);
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
-                LOGGER.debug("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
+                logger.debug("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
                 return handleCallback(code.get(0));
             }
             String clientSessionId = getClientSessionId(httpRequest);
@@ -121,9 +119,8 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException cause) {
-        ExceptionFieldsExtractor exceptionFieldsExtractor = new MustAuthorizeExceptionExtractor(cause);
-        Map<String, String> fields = exceptionFieldsExtractor.getFields();
-        return new AuthorizationResponse(azureOAuthService.getAuthorizationUrlForFields(fields), List.of());
+        Map<String, String> invokerAttributes = oauthSessionStore.getInvokerAttributes();
+        return new AuthorizationResponse(azureOAuthService.getAuthorizationUrlForFields(invokerAttributes), List.of());
     }
 
     private String getClientSessionId(HttpRequest httpRequest) {
@@ -138,7 +135,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
         String clientSessionId;
         clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
-        LOGGER.debug("Client Session Id from query param: {}", clientSessionId);
+        logger.debug("Client Session Id from query param: {}", clientSessionId);
         if (Objects.isNull(clientSessionId)) {
             MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
             if (!queryParameters.isEmpty()) {
@@ -154,13 +151,13 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         if (!Objects.isNull(authenticatedAccountId)) {
             try {
                 accountProvider.getAccount(authenticatedAccountId);
-                LOGGER.info("Got Authenticated AccountId: {}", authenticatedAccountId);
+                logger.info("Got Authenticated AccountId: {}", authenticatedAccountId);
                 return authenticatedAccountId;
             } catch (NoSuchElementException cause) {
-                LOGGER.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
+                logger.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
             }
         }
-        LOGGER.debug("No account found for clientSessionId: {}", clientSessionId);
+        logger.debug("No account found for clientSessionId: {}", clientSessionId);
         return null;
     }
 
@@ -169,7 +166,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             String[] cookies = cookie.split(";");
             for (String c : cookies) {
                 if (c.trim().startsWith(CLIENT_SESSION_ID)) {
-                    LOGGER.debug("cookie :{}", c);
+                    logger.debug("cookie :{}", c);
                     String[] keyValue = c.split("=");
                     return keyValue.length > 1 ? keyValue[1] : null;
                 }
@@ -181,14 +178,15 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     public String handleCallback(String code) {
         CompletableFuture<String> accessTokenFuture = azureOAuthService.getAccessTokenFuture(code);
         String email = userInfoService.getEmail(accessTokenFuture);
-        LOGGER.info("{} authenticated successfully", email);
+        logger.info("{} authenticated successfully", email);
         String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
-        tokenStore.saveAccessToken(email, accessTokenFuture.join());
+        oauthSessionStore.saveAccessToken(email, accessTokenFuture.join());
         if (Objects.isNull(accountIdByEmail)) {
             accountIdByEmail = accountManagerService.createAccount(email);
-            String sessionId = sessionManager.createSession(accountIdByEmail);
-            tokenStore.saveSessionId(accountIdByEmail, sessionId);
         }
+        String sessionId = sessionManager.createSession(accountIdByEmail);
+        logger.debug("session id:{} for user: {}", sessionId, email);
+        oauthSessionStore.saveSessionId(accountIdByEmail, sessionId);
         return accountIdByEmail;
     }
 }

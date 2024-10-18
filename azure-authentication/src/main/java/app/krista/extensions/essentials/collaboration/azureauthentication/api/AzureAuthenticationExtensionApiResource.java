@@ -3,7 +3,7 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 import app.krista.extension.impl.jaxrs.util.Resources;
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
-import app.krista.extensions.essentials.collaboration.azureauthentication.store.AzureAuthenticationTokenStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.context.AuthorizationContext;
 import com.google.gson.JsonObject;
@@ -28,15 +28,15 @@ import static javax.ws.rs.core.HttpHeaders.SET_COOKIE;
 
 @Path("/")
 public class AzureAuthenticationExtensionApiResource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AzureAuthenticationExtensionApiResource.class);
+    private static final Logger logger = LoggerFactory.getLogger(AzureAuthenticationExtensionApiResource.class);
     private final AuthorizationContext authorizationContext;
-    private final AzureAuthenticationTokenStore tokenStore;
+    private final OauthSessionStore oauthSessionStore;
     private final AzureOAuthService azureOAuthService;
 
     @Inject
-    public AzureAuthenticationExtensionApiResource(AzureAuthenticationTokenStore tokenStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService) {
+    public AzureAuthenticationExtensionApiResource(OauthSessionStore oauthSessionStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService) {
         this.authorizationContext = authorizationContext;
-        this.tokenStore = tokenStore;
+        this.oauthSessionStore = oauthSessionStore;
         this.azureOAuthService = azureOAuthService;
     }
 
@@ -83,7 +83,7 @@ public class AzureAuthenticationExtensionApiResource {
 
         int maxAgeInSeconds = getMaxAgeInSeconds();
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
-        String sessionId = tokenStore.getSessionId(authorizationContext.getAuthorizedAccount().getAccountId());
+        String sessionId = oauthSessionStore.getSessionId(authorizationContext.getAuthorizedAccount().getAccountId());
         try {
             Response response = Resources.getTranslatedResource(getClass(),
                     "index.html", Map.of("_clientSessionId_", sessionId));
