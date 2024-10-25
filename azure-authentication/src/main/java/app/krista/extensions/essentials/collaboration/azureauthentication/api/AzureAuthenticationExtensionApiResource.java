@@ -75,17 +75,22 @@ public class AzureAuthenticationExtensionApiResource {
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response loginOptions(@Context java.net.http.HttpHeaders headers, String email) {
-        return getResponseBuilderWithCORSHeaders().build();
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
+    @POST
+    @Path("/authorize")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response authorize(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
+        return Response.ok(Map.of(Constants.AUTH_URL_KEY, azureOAuthService.getAuthorizationURL())).build();
     }
 
     @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
-        logger.info("auhorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount(),clientSessionId);
-        if (clientSessionId == null || clientSessionId.isEmpty()) {
-            return getResponseBuilderWithCORSHeaders().entity(Map.of("authUrl", azureOAuthService.getAuthorizationURL())).build();
-        }
+        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount(), clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
         ModifiableAccount account = accountManager.getAccount(accountId);
         AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId);
@@ -93,11 +98,10 @@ public class AzureAuthenticationExtensionApiResource {
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
         NewCookie sessionCookie = new NewCookie(Constants.CHATBOT_SESSION_ID,
                 clientSessionId, "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
-        return getResponseBuilderWithCORSHeaders()
+        return Response.ok(GsonJsonMapperImpl.getInstance().toString(authenticationResponse))
                 .cookie(sessionCookie)
                 .header(SET_COOKIE, sessionCookie)
                 .header(Constants.CHATBOT_SESSION_ID, clientSessionId)
-                .entity(GsonJsonMapperImpl.getInstance().toString(authenticationResponse))
                 .build();
     }
 
@@ -112,9 +116,8 @@ public class AzureAuthenticationExtensionApiResource {
             Response response = Resources.getTranslatedResource(getClass(),
                     "index.html", Map.of("_clientSessionId_", sessionId));
             if (!Objects.isNull(sessionCookieInRequest) && !sessionCookieInRequest.getValue().isBlank()) {
-                return getResponseBuilderWithCORSHeaders()
+                return Response.ok(response.getEntity())
                         .header(Constants.CHATBOT_SESSION_ID, sessionCookieInRequest.getValue())
-                        .entity(response.getEntity())
                         .build();
             }
 
@@ -124,11 +127,10 @@ public class AzureAuthenticationExtensionApiResource {
                     sessionId, "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
             NewCookie xKristaContextCookie = new NewCookie(Constants.X_KRISTA_CONTEXT,
                     getEncodedClientSessionId(sessionId), "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
-            return getResponseBuilderWithCORSHeaders()
+            return Response.ok(response.getEntity())
                     .cookie(sessionCookie)
                     .header(SET_COOKIE, xKristaContextCookie)
                     .header(Constants.CHATBOT_SESSION_ID, sessionId)
-                    .entity(response.getEntity())
                     .build();
         } catch (IOException cause) {
             throw new FileOperationException("error occurred while loading page", cause);
@@ -141,12 +143,6 @@ public class AzureAuthenticationExtensionApiResource {
         return URLEncoder.encode(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 
-    private Response.ResponseBuilder getResponseBuilderWithCORSHeaders() {
-        return Response.status(200)
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-                .header("Access-Control-Allow-Headers", "Content-Type,clientSessionId");
-    }
 
     private int getMaxAgeInSeconds() {
         return 24 * 60 * 60;

@@ -7,8 +7,17 @@ import org.jvnet.hk2.annotations.Service;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Service class dealing with user information operations.
+ */
 @Service
-public class UserInfoService {
+public class UserInfoService implements UserInfoServiceInterface {
+    /**
+     * Retrieves a user's email address from an access token.
+     *
+     * @param accessTokenFuture a CompletableFuture of String representing the access token
+     * @return a String representing the user's email
+     */
     public String getEmail(CompletableFuture<String> accessTokenFuture) {
         GraphServiceClient<Request> graphClient = GraphServiceClient
                 .builder()

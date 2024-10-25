@@ -4,6 +4,8 @@ public class Constants {
     private Constants() {
     }
 
+    public static final String AUTH_URL_KEY = "authUrl";
+    public static final String SEMI_COLON = ";";
     public static final String TENANT_ID = "tenantId";
     public static final String CLIENT_SECRET = "clientSecret";
     public static final String CLIENT_ID = "clientId";

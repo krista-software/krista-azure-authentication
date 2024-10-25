@@ -20,7 +20,7 @@ let Auth = (() => {
 
   const doLogin = (payload) => {
     return new Promise((resolve, reject) => {
-      fetch(constructUrl("../authn/login"), {
+      fetch(constructUrl("../authn/authorize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

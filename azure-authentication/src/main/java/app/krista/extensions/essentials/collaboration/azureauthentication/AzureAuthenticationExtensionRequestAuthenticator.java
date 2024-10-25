@@ -11,6 +11,7 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.servic
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.util.CommonUtils;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.AccountProvider;
 import app.krista.ksdk.authentication.SessionManager;
@@ -128,7 +129,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     private String getClientSessionId(HttpRequest httpRequest) {
         String cookie = httpRequest.getHeader(Constants.COOKIE);
-        String clientSessionId = getCookie(cookie);
+        String clientSessionId = getClientSessionIdFromCookie(cookie);
         if (Objects.isNull(clientSessionId)) {
             return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
         }
@@ -164,19 +165,16 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         return null;
     }
 
-    private String getCookie(String cookie) {
+    private String getClientSessionIdFromCookie(String cookie) {
         if (!Objects.isNull(cookie)) {
-            String[] cookies = cookie.split(";");
+            String[] cookies = cookie.split(Constants.SEMI_COLON);
             for (String c : cookies) {
+                logger.debug("cookie :{}", c);
                 if (c.trim().startsWith(CLIENT_SESSION_ID)) {
-                    logger.debug("cookie :{}", c);
-                    String[] keyValue = c.split("=");
-                    return keyValue.length > 1 ? keyValue[1] : null;
+                    return CommonUtils.findValue(c);
                 }
                 if (c.trim().startsWith(CHATBOT_SESSION_ID)) {
-                    logger.debug("cookie :{}", c);
-                    String[] keyValue = c.split("=");
-                    return keyValue.length > 1 ? keyValue[1] : null;
+                    return CommonUtils.findValue(c);
                 }
             }
         }

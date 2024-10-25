@@ -173,4 +173,15 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Parses the given string and returns the part of string after the "=" sign.
+     *
+     * @param keyValueString the string to parse. It should be in a format like "key=value"
+     * @return value part of the given string after the "=" sign, null if there is none
+     */
+    public static String findValue(String keyValueString) {
+        String[] keyValue = keyValueString.split("=");
+        return keyValue.length > 1 ? keyValue[1] : null;
+    }
+
 }
