@@ -63,6 +63,7 @@ public class OauthSessionStore {
 
     public void saveSessionId(String accountId, String sessionId) {
         keyValueStore.put(getSessionKey(accountId), sessionId);
+        keyValueStore.put(getSessionKey(sessionId), accountId);
     }
 
     private String getSessionKey(String accountId) {

@@ -30,6 +30,30 @@ let Auth = (() => {
         .then((response) => response.json())
         .then((data) => {
           window.open(data.authUrl,'_blank', 'width=600,height=400');
+          window.addEventListener('message', (event) => {
+                       // Check if the message contains the session ID
+                        if (event.data && event.data.clientSessionId) {
+                            const clientSessionId = event.data.clientSessionId;
+
+                            // Call /login with the session ID
+                            fetch(constructUrl("../authn/login"), {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "clientSessionId": clientSessionId, // Pass clientSessionId in the header
+                                },
+                            })
+                            .then((response) => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                return response.json(); // Parse the JSON response
+                            })
+                            .then((loginData) => {
+                                resolve(loginData); // Resolve the promise with the login response
+                            })
+                        }
+                    });
         })
         .catch((error) => {
           reject(`Chatbot login failed.`);

@@ -68,6 +68,9 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
             logger.debug("path {}", path);
+            if (Objects.equals("/login", path)) {
+                return authorizationContext.getAuthorizedAccount().getAccountId();
+            }
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
@@ -166,6 +169,11 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             String[] cookies = cookie.split(";");
             for (String c : cookies) {
                 if (c.trim().startsWith(CLIENT_SESSION_ID)) {
+                    logger.debug("cookie :{}", c);
+                    String[] keyValue = c.split("=");
+                    return keyValue.length > 1 ? keyValue[1] : null;
+                }
+                if (c.trim().startsWith(CHATBOT_SESSION_ID)) {
                     logger.debug("cookie :{}", c);
                     String[] keyValue = c.split("=");
                     return keyValue.length > 1 ? keyValue[1] : null;
