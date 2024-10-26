@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<script>
+    window.opener.postMessage({ authenticated: true, clientSessionId: "_clientSessionId_"}, '*');
+    window.close();
+</script>
+
+</body>
+</html>

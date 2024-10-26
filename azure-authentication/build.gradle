@@ -1,0 +1,70 @@
+plugins {
+    id 'java-library'
+    id("io.github.surpsg.code-lines") version "0.0.1"
+}
+codeLinesStat {
+    sourceFilters.skipBlankLines = true // optional, `false` by default
+    fileExtensions = ['java'] // optional, empty by default
+}
+jar.archiveBaseName = "azure-authentication-extension"
+group 'app.krista.extensions.essentials.collaboration'
+version(System.getenv('BRANCH') == null ? "local" : System.getenv('BRANCH').replace("/", "_").replace("azure-authentication-", ""))
+
+
+compileJava.dependsOn clean
+
+System.setProperty("extensionVersion", version.toString())
+
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
+repositories {
+    mavenLocal()
+    maven {
+        url "https://packages.cicd.in.antbrains.com/artifactory/libs-release"
+    }
+    mavenCentral()
+}
+
+configurations {
+    implementation {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    annotationProcessor 'app.krista:extension-impl-anno-processors:1.0.104-rc5'
+    implementation 'app.krista:krista-apis:1.0.104-rc5'
+    implementation 'org.glassfish.hk2:hk2-api:3.0.3'
+    implementation 'com.microsoft.graph:microsoft-graph:5.76.0'
+    implementation 'com.microsoft.azure:msal4j:1.17.2'
+    implementation 'com.kristasoft.common:common-test:1.0.43-rc1'
+}
+
+task createSourceDir(type: Exec) {
+    dependsOn processResources
+    commandLine "mkdir", "-p", "$projectDir/build/classes/java/main/META-INF/project"
+}
+
+task copyGradleFile(type: Exec) {
+    dependsOn createSourceDir
+    commandLine "cp", "$projectDir/build.gradle", "$projectDir/build/classes/java/main/META-INF/project/build.gradle"
+}
+
+task includeSources(type: Exec) {
+    dependsOn copyGradleFile
+    commandLine "cp", "-r", "$projectDir/src", "$projectDir/build/classes/java/main/META-INF/project/src"
+}
+
+jar {
+    manifest {
+    }
+    from {
+        configurations.implementation.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    duplicatesStrategy = "exclude"
+}
