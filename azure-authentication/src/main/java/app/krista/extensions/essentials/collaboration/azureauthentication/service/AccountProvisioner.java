@@ -18,13 +18,14 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static app.krista.extensions.essentials.collaboration.azureauthentication.AzureAuthenticationExtension.DEFAULT_ROLE_KEY;
+
 /**
  * Create or fetch workspace account with given IdentificationToken.
  */
 @Service
 public final class AccountProvisioner {
     public static final String DEFAULT_ROLE_FOR_NEW_ACCOUNT = "Krista Guest User";
-    public static final String DEFAULT_ROLE_KEY = "default_role";
 
     private final AccountManager accountManager;
     private final RoleManager roleManager;
@@ -57,18 +58,9 @@ public final class AccountProvisioner {
     private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String roles)
             throws AuthorizationException {
         List<String> allRoles = new ArrayList<>();
-        Iterable<ModifiableRole> workspaceRoles = roleManager.getRoles();
-        boolean roleExit = false;
-        for (ModifiableRole workspaceRole : workspaceRoles) {
-            if (Objects.equals(roles, workspaceRole.getName())) {
-                allRoles.add(workspaceRole.getRoleId());
-                roleExit = true;
-                break;
-            }
-        }
-        if (!roleExit) {
-            ModifiableRole role = roleManager.createRole(roles);
-            allRoles.add(role.getRoleId());
+        ModifiableRole workspaceRole = roleManager.lookupRole(roles);
+        if (workspaceRole != null) {
+            allRoles.add(workspaceRole.getRoleId());
         }
         if (modifiableAccount != null) {
             for (Role role : modifiableAccount.getRoles()) {

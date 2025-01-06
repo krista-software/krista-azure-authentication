@@ -10,11 +10,17 @@ import java.util.stream.Collectors;
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 
 public class AzureAuthenticationCredentialBuilder {
+    private String defaultRole;
     private String clientId;
     private String clientSecret;
     private String tenantId;
     private String routingUrl;
     private final Set<String> scopes = new HashSet<>();
+
+    public AzureAuthenticationCredentialBuilder defaultRole(String clientId) {
+        this.defaultRole = defaultRole;
+        return this;
+    }
 
     public AzureAuthenticationCredentialBuilder clientId(String clientId) {
         this.clientId = clientId;

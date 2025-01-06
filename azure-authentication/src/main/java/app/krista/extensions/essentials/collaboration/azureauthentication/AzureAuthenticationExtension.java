@@ -30,11 +30,13 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
         ecosystemVersion = "3e7e09ed-688f-41fa-ab7c-ff879e750011")
 @Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-rc1")
 @StaticResource(path = "docs", file = "docs")
+@Field.Text(name = AzureAuthenticationExtension.DEFAULT_ROLE_KEY, required = false)
 @Field.Text(name = CLIENT_ID)
 @Field.Text(name = Constants.CLIENT_SECRET, isSecured = true)
 @Field.Text(name = Constants.TENANT_ID)
 @StaticResource(path = "docs", file = "docs")
 public class AzureAuthenticationExtension {
+    public static final String DEFAULT_ROLE_KEY = "default_role";
     private final Logger logger = LoggerFactory.getLogger(AzureAuthenticationExtension.class);
     private final RequestAuthenticator requestAuthenticator;
     private final Invoker invoker;
