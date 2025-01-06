@@ -17,7 +17,7 @@ public class AzureAuthenticationCredentialBuilder {
     private String routingUrl;
     private final Set<String> scopes = new HashSet<>();
 
-    public AzureAuthenticationCredentialBuilder defaultRole(String clientId) {
+    public AzureAuthenticationCredentialBuilder defaultRole(String defaultRole) {
         this.defaultRole = defaultRole;
         return this;
     }

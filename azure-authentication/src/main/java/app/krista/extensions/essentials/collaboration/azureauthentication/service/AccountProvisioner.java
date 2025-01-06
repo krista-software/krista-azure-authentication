@@ -55,10 +55,10 @@ public final class AccountProvisioner {
         return modifiableAccount;
     }
 
-    private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String roles)
+    private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String assignedRole)
             throws AuthorizationException {
         List<String> allRoles = new ArrayList<>();
-        ModifiableRole workspaceRole = roleManager.lookupRole(roles);
+        ModifiableRole workspaceRole = roleManager.lookupRole(assignedRole);
         if (workspaceRole != null) {
             allRoles.add(workspaceRole.getRoleId());
         }
