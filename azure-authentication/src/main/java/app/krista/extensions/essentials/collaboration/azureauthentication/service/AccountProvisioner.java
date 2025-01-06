@@ -40,9 +40,9 @@ public final class AccountProvisioner {
     }
 
     public Account provisionAccount(String emailAddress) {
-        String assignedRole = createRoleIfNotPresent();
+        String roleName = createRoleIfNotPresent();
         ModifiableAccount modifiableAccount = accountManager.lookupAccount(emailAddress);
-        List<String> roleNames = ensureHasAllRoles(modifiableAccount, assignedRole);
+        List<String> roleNames = ensureHasAllRoles(modifiableAccount, roleName);
         if (modifiableAccount == null) {
             modifiableAccount = accountManager.createAccount(EmailAddresses.getLocalPart(emailAddress),
                     EmailAddresses.normalizeEmailAddress(emailAddress),
@@ -55,10 +55,10 @@ public final class AccountProvisioner {
         return modifiableAccount;
     }
 
-    private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String assignedRole)
+    private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String roleName)
             throws AuthorizationException {
         List<String> allRoles = new ArrayList<>();
-        ModifiableRole workspaceRole = roleManager.lookupRole(assignedRole);
+        ModifiableRole workspaceRole = roleManager.lookupRole(roleName);
         if (workspaceRole != null) {
             allRoles.add(workspaceRole.getRoleId());
         }
