@@ -185,11 +185,8 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         CompletableFuture<String> accessTokenFuture = azureOAuthService.getAccessTokenFuture(code);
         String email = userInfoService.getEmail(accessTokenFuture);
         logger.info("{} authenticated successfully", email);
-        String accountIdByEmail = accountManagerService.getAccountIdByEmail(email);
         oauthSessionStore.saveAccessToken(email, accessTokenFuture.join());
-        if (Objects.isNull(accountIdByEmail)) {
-            accountIdByEmail = accountManagerService.createAccount(email);
-        }
+        String accountIdByEmail = accountManagerService.createAccount(email);
         String sessionId = sessionManager.createSession(accountIdByEmail);
         logger.debug("session id:{} for user: {}", sessionId, email);
         oauthSessionStore.saveSessionId(accountIdByEmail, sessionId);
