@@ -28,8 +28,7 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
         ecosystemId = "catEntryEcosystem_d3b05047-07b0-4b06-95a3-9fb8f7f608d9",
         ecosystemName = "Krista",
         ecosystemVersion = "3e7e09ed-688f-41fa-ab7c-ff879e750011")
-@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-rc1")
-@StaticResource(path = "docs", file = "docs")
+@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-rc3")
 @Field.Text(name = AzureAuthenticationExtension.DEFAULT_ROLE_KEY, required = false)
 @Field.Text(name = CLIENT_ID)
 @Field.Text(name = Constants.CLIENT_SECRET, isSecured = true)
