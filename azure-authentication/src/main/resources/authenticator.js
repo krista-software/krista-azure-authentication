@@ -29,7 +29,8 @@ let Auth = (() => {
       })
         .then((response) => response.json())
         .then((data) => {
-          window.open(data.authUrl,'_blank', 'width=600,height=400');
+          let isAuthenticatedSuccessfully = false;
+          const authWindow = window.open(data.authUrl,'_blank', 'width=600,height=400');
           window.addEventListener('message', (event) => {
                        // Check if the message contains the session ID
                         if (event.data && event.data.clientSessionId) {
@@ -50,13 +51,19 @@ let Auth = (() => {
                                 return response.json(); // Parse the JSON response
                             })
                             .then((loginData) => {
+                                isAuthenticatedSuccessfully = true;
                                 resolve(loginData); // Resolve the promise with the login response
                             })
                         }
                     });
+            window.addEventListener("focus", () => {
+                if (!isAuthenticatedSuccessfully && (!authWindow || authWindow.closed)) {
+                    reject("AZURE AUTH WINDOW CLOSED...");
+                }
+            });
         })
         .catch((error) => {
-          reject(`Chatbot login failed.`);
+          reject(`AZURE LOGIN FAILED CATCH ERROR -> ${error.message}`);
         });
     });
   };
