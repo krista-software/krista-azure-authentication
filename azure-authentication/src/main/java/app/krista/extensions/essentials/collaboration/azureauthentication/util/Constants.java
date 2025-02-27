@@ -20,4 +20,6 @@ public class Constants {
     public static final String STATE = "state";
     public static final String AUTHENTICATION_TYPE = "Azure Authentication";
     public static final String CLIENT_SESSION_ID = "clientSessionId";
+    public static final String AUTH_CONTEXT_ID = "authContextId";
+    public static final String TEXT_FIELD_TYPE = "Text";
 }

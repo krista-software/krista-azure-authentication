@@ -123,8 +123,14 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException cause) {
-        Map<String, String> invokerAttributes = oauthSessionStore.getInvokerAttributes();
-        return new AuthorizationResponse(azureOAuthService.getAuthorizationUrlForFields(invokerAttributes), List.of());
+        String authContextId = (String)cause.getDetails().get(3).getValue();
+        logger.debug("Auth Context ID found : {}", authContextId);
+        Map<String, String> invokerAttributes = oauthSessionStore.getOAuthAttributes(authContextId);
+        String authorizationUrlForFields = azureOAuthService.getAuthorizationUrlForFields(invokerAttributes);
+
+        oauthSessionStore.removeOAuthAttributes(authContextId);
+
+        return new AuthorizationResponse(authorizationUrlForFields, List.of());
     }
 
     private String getClientSessionId(HttpRequest httpRequest) {
@@ -184,10 +190,14 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     public String handleCallback(String code) {
         CompletableFuture<String> accessTokenFuture = azureOAuthService.getAccessTokenFuture(code);
         String email = userInfoService.getEmail(accessTokenFuture);
+
         logger.info("{} authenticated successfully", email);
+
         oauthSessionStore.saveAccessToken(email, accessTokenFuture.join());
+
         String accountIdByEmail = accountManagerService.createAccount(email);
         String sessionId = sessionManager.createSession(accountIdByEmail);
+
         logger.debug("session id:{} for user: {}", sessionId, email);
         oauthSessionStore.saveSessionId(accountIdByEmail, sessionId);
         return accountIdByEmail;
