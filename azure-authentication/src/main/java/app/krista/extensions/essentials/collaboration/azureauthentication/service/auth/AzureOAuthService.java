@@ -119,8 +119,7 @@ public class AzureOAuthService {
 
     public String updateTokens(CompletableFuture<String> refreshToken) {
             try {
-                this.attributes = invoker.getAttributes()
-                        .entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> (String) entry.getValue()));
+                this.attributes = oauthSessionStore.getInvokerAttributes();
 
                 String token = refreshToken.join();
                 logger.info("Refresh Token in Update Token : {}", token);

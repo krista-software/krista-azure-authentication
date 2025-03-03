@@ -90,7 +90,7 @@ public class AzureAuthenticationExtensionApiResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
-        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount(), clientSessionId);
+        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId() , clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
         ModifiableAccount account = accountManager.getAccount(accountId);
         AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId);
