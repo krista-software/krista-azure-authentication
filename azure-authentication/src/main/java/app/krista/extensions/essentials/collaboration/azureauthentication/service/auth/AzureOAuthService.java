@@ -122,7 +122,7 @@ public class AzureOAuthService {
                 this.attributes = oauthSessionStore.getInvokerAttributes();
 
                 String token = refreshToken.join();
-                logger.info("Refresh Token in Update Token : {}", token);
+                logger.info("Refresh Token in Update Token");
 
                 String scope = "User.Read";
                 Set<String> scopeSet = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());

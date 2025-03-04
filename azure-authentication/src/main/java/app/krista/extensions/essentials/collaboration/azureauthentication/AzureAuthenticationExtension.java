@@ -4,8 +4,6 @@ import app.krista.extension.authorization.MustAuthorizeException;
 import app.krista.extension.authorization.RequestAuthenticator;
 import app.krista.extension.executor.Invoker;
 import app.krista.extension.impl.anno.*;
-import app.krista.extension.request.RoutingInfo;
-import app.krista.extension.request.protos.http.HttpProtocol;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
@@ -28,7 +26,7 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
         ecosystemId = "catEntryEcosystem_d3b05047-07b0-4b06-95a3-9fb8f7f608d9",
         ecosystemName = "Krista",
         ecosystemVersion = "3e7e09ed-688f-41fa-ab7c-ff879e750011")
-@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-local17_rc3")
+@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-rc3")
 @Field.Text(name = AzureAuthenticationExtension.DEFAULT_ROLE_KEY, required = false)
 @Field.Text(name = CLIENT_ID)
 @Field.Text(name = Constants.CLIENT_SECRET, isSecured = true)
@@ -69,6 +67,7 @@ public void validateAttributes(Map<String, String> attributes) {
     String clientSecret = attributes.get(CLIENT_SECRET);
     String tenantId = attributes.get(TENANT_ID);
     Account authorizedAccount = authorizationContext.getAuthorizedAccount();
+    logger.info("IS workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
     String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
     if (Objects.isNull(refreshToken)) {
         logger.info("Access Token is Null");
@@ -84,7 +83,7 @@ public void validateAttributes(Map<String, String> attributes) {
     logger.info("Processed After Auth");
     String accessToken = getAccessToken(CompletableFuture.completedFuture(refreshToken));
 
-    logger.info("Access Token : {}", accessToken);
+    logger.info("Access Token Received");
     String email = userInfoService.getEmail(CompletableFuture.completedFuture(accessToken));
     logger.info("user: {} authorized", email);
 }

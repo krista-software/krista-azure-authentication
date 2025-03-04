@@ -37,7 +37,8 @@ public class AccountManagerService {
     }
 
     private void addDomainToWorkspaceIfNotPresent(String email) throws AuthorizationException {
-        List<String> supportedDomainsForWorkspace = authenticationSettings.getSupportedDomains();
+        List<String> supportedDomainsForWorkspace = authenticationSettings.getSupportedDomains();// List.of("omni.com", "krista.ai", "kristasoft.com");
+        System.out.println("Supported Domains : "+ supportedDomainsForWorkspace.toString());
         String supportedDomain = String.join(",", supportedDomainsForWorkspace);
         String invokerDomains = EmailAddresses.getDomainName(email);
         CommonUtils.validateIfSupportedDomain(email, supportedDomain, invokerDomains);

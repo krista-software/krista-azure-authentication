@@ -18,55 +18,62 @@ let Auth = (() => {
     baseUrl = url;
   };
 
-  const doLogin = (payload) => {
-    return new Promise((resolve, reject) => {
-      fetch(constructUrl("../authn/authorize"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          let isAuthenticatedSuccessfully = false;
-          const authWindow = window.open(data.authUrl,'_blank', 'width=600,height=400');
-          window.addEventListener('message', (event) => {
-                       // Check if the message contains the session ID
+    const doLogin = (payload) => {
+        return new Promise((resolve, reject) => {
+            fetch(constructUrl("../authn/authorize"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let isAuthenticatedSuccessfully = false;
+                    const authWindow = window.open(data.authUrl, '_blank', 'width=600,height=400');
+
+                    const messageHandler = (event) => {
+                        if (event.origin !== window.location.origin) return; // Validate origin
                         if (event.data && event.data.clientSessionId) {
                             const clientSessionId = event.data.clientSessionId;
 
-                            // Call /login with the session ID
                             fetch(constructUrl("../authn/login"), {
                                 method: "POST",
                                 headers: {
                                     "Content-Type": "application/json",
-                                    "clientSessionId": clientSessionId, // Pass clientSessionId in the header
+                                    "clientSessionId": clientSessionId,
                                 },
                             })
-                            .then((response) => {
-                                if (!response.ok) {
-                                    throw new Error(`HTTP error! status: ${response.status}`);
-                                }
-                                return response.json(); // Parse the JSON response
-                            })
-                            .then((loginData) => {
-                                isAuthenticatedSuccessfully = true;
-                                resolve(loginData); // Resolve the promise with the login response
-                            })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP error! status: ${response.status}`);
+                                    }
+                                    return response.json();
+                                })
+                                .then(loginData => {
+                                    isAuthenticatedSuccessfully = true;
+                                    window.removeEventListener("message", messageHandler); // Cleanup
+                                    resolve(loginData);
+                                })
+                                .catch(error => {
+                                    window.removeEventListener("message", messageHandler); // Cleanup
+                                    reject(`LOGIN API ERROR: ${error.message}`);
+                                });
                         }
-                    });
-            window.addEventListener("focus", () => {
-                if (!isAuthenticatedSuccessfully && (!authWindow || authWindow.closed)) {
-                    reject("AZURE AUTH WINDOW CLOSED...");
-                }
-            });
-        })
-        .catch((error) => {
-          reject(`AZURE LOGIN FAILED CATCH ERROR -> ${error.message}`);
+                    };
+
+                    window.addEventListener("message", messageHandler);
+
+                    const checkWindowClosed = setInterval(() => {
+                        if (!isAuthenticatedSuccessfully && authWindow && authWindow.closed) {
+                            clearInterval(checkWindowClosed);
+                            window.removeEventListener("message", messageHandler);
+                            reject("AZURE AUTH WINDOW CLOSED...");
+                        }
+                    }, 500);
+                })
+                .catch(error => reject(`AZURE LOGIN FAILED: ${error.message}`));
         });
-    });
-  };
+    };
+
 
   const doDecorateRequest = () => {
     let headers = {};
