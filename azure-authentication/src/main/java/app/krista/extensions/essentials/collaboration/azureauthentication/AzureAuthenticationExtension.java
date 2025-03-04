@@ -68,6 +68,7 @@ public void validateAttributes(Map<String, String> attributes) {
     String tenantId = attributes.get(TENANT_ID);
     Account authorizedAccount = authorizationContext.getAuthorizedAccount();
     logger.info("IS workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
+    logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
     String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
     if (Objects.isNull(refreshToken)) {
         logger.info("Access Token is Null");

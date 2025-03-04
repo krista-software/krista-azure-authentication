@@ -68,17 +68,19 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         try {
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
-            logger.debug("path {}", path);
+            logger.info("path {}", path);
             if (Objects.equals("/login", path)) {
+                logger.info("Preparing for Login at getAuthenticatedAccountId");
                 return authorizationContext.getAuthorizedAccount().getAccountId();
             }
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
-                logger.debug("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
+                logger.info("Authorization Context: {}", authorizationContext.getAuthorizedAccount().getAccountId());
                 return handleCallback(code.get(0));
             }
             String clientSessionId = getClientSessionId(httpRequest);
+            logger.info("Client Session Id is Received : {}", clientSessionId);
             if (!Objects.isNull(clientSessionId)) {
                 return getAuthenticatedAccountId(clientSessionId);
             }
@@ -100,6 +102,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public ProtoResponse getMustAuthenticateResponse(MustAuthenticateException e, ProtoRequest protoRequest) {
+        logger.info("Preparing for ProtoResponse");
         return new HttpResponse(302,
                 Map.of(HttpHeaders.LOCATION, azureOAuthService.getAuthorizationURL(),
                         "Access-Control-Allow-Origin", "*"),
@@ -108,6 +111,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public AuthorizationResponse getMustAuthenticateResponse(MustAuthenticateException e) {
+        logger.info("Preparing for callback");
         return new AuthorizationResponse(azureOAuthService.getAuthorizationURL(), List.of());
     }
 
@@ -124,7 +128,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     @Override
     public AuthorizationResponse getMustAuthorizeResponse(MustAuthorizeException cause) {
         String authContextId = (String)cause.getDetails().get(3).getValue();
-        logger.debug("Auth Context ID found : {}", authContextId);
+        logger.info("Auth Context ID found : {}", authContextId);
         Map<String, String> invokerAttributes = oauthSessionStore.getOAuthAttributes(authContextId);
         String authorizationUrlForFields = azureOAuthService.getAuthorizationUrlForFields(invokerAttributes);
 
@@ -145,12 +149,14 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
         String clientSessionId;
         clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
-        logger.debug("Client Session Id from query param: {}", clientSessionId);
+        logger.info("Client Session Id from query param: {}", clientSessionId);
         if (Objects.isNull(clientSessionId)) {
             MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
+            logger.info("Client Session Id is not available in header, now fetching from query parameter");
             if (!queryParameters.isEmpty()) {
                 List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
                 clientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
+                logger.info("Client Session Id Fetched from query parameter : {}", clientSessionId);
             }
         }
         return clientSessionId;
@@ -158,6 +164,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     private String getAuthenticatedAccountId(String clientSessionId) {
         String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
+        logger.info("Received authenticatedAccountId from Session Manager : {}", authenticatedAccountId);
         if (!Objects.isNull(authenticatedAccountId)) {
             try {
                 accountProvider.getAccount(authenticatedAccountId);
@@ -167,7 +174,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
                 logger.error("No such account Id exist: {} with exception: {}", authenticatedAccountId, cause);
             }
         }
-        logger.debug("No account found for clientSessionId: {}", clientSessionId);
+        logger.info("No account found for clientSessionId: {}", clientSessionId);
         return null;
     }
 
@@ -175,7 +182,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         if (!Objects.isNull(cookie)) {
             String[] cookies = cookie.split(Constants.SEMI_COLON);
             for (String c : cookies) {
-                logger.debug("cookie :{}", c);
+                logger.info("cookie :{}", c);
                 if (c.trim().startsWith(CLIENT_SESSION_ID)) {
                     return CommonUtils.findValue(c);
                 }
@@ -198,7 +205,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         String accountIdByEmail = accountManagerService.createAccount(email);
         String sessionId = sessionManager.createSession(accountIdByEmail);
 
-        logger.debug("session id:{} for user: {}", sessionId, email);
+        logger.info("session id:{} for user: {}", sessionId, email);
         oauthSessionStore.saveSessionId(accountIdByEmail, sessionId);
         return accountIdByEmail;
     }

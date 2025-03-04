@@ -28,12 +28,19 @@ let Auth = (() => {
                 .then(response => response.json())
                 .then(data => {
                     let isAuthenticatedSuccessfully = false;
-                    const authWindow = window.open(data.authUrl, '_blank', 'width=600,height=400');
+                    const authWindow = window.open(data.authUrl, "_blank", "width=600,height=400");
 
                     const messageHandler = (event) => {
                         if (event.origin !== window.location.origin) return; // Validate origin
                         if (event.data && event.data.clientSessionId) {
                             const clientSessionId = event.data.clientSessionId;
+
+                            // **Ensure flag is updated before making async call**
+                            isAuthenticatedSuccessfully = true;
+                            console.log("Authenticated Successfully - Flag Updated");
+
+                            // **Stop checking for window close immediately**
+                            clearInterval(checkWindowClosed);
 
                             fetch(constructUrl("../authn/login"), {
                                 method: "POST",
@@ -49,19 +56,23 @@ let Auth = (() => {
                                     return response.json();
                                 })
                                 .then(loginData => {
-                                    isAuthenticatedSuccessfully = true;
-                                    window.removeEventListener("message", messageHandler); // Cleanup
+                                    console.log("Authenticated Successfully - API Call Done");
+
+                                    // Cleanup after successful authentication
+                                    window.removeEventListener("message", messageHandler);
+
                                     resolve(loginData);
                                 })
                                 .catch(error => {
-                                    window.removeEventListener("message", messageHandler); // Cleanup
+                                    console.log("Authenticated Failed Login API Error");
                                     reject(`LOGIN API ERROR: ${error.message}`);
                                 });
                         }
                     };
 
-                    window.addEventListener("message", messageHandler);
+                    window.addEventListener("message", messageHandler, { once: true }); // Handle message only once
 
+                    // Periodically check if auth window is closed
                     const checkWindowClosed = setInterval(() => {
                         if (!isAuthenticatedSuccessfully && authWindow && authWindow.closed) {
                             clearInterval(checkWindowClosed);
