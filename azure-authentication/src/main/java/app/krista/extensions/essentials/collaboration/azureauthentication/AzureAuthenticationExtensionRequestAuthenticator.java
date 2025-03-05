@@ -102,7 +102,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public ProtoResponse getMustAuthenticateResponse(MustAuthenticateException e, ProtoRequest protoRequest) {
-        logger.info("Preparing for ProtoResponse");
+        logger.info("Preparing for ProtoResponse of getMustAuthenticateResponse");
         return new HttpResponse(302,
                 Map.of(HttpHeaders.LOCATION, azureOAuthService.getAuthorizationURL(),
                         "Access-Control-Allow-Origin", "*"),
@@ -117,6 +117,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
 
     @Override
     public ProtoResponse getMustAuthorizeResponse(MustAuthorizeException e, ProtoRequest protoRequest) {
+        logger.info("Preparing for ProtoResponse of getMustAuthorizeResponse");
         HttpRequest httpRequest = (HttpRequest) protoRequest;
         String routingUrl = httpRequest.getHeader("routingUrl");
         return new HttpResponse(302,
@@ -140,31 +141,59 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     private String getClientSessionId(HttpRequest httpRequest) {
         String cookie = httpRequest.getHeader(Constants.COOKIE);
         String clientSessionId = getClientSessionIdFromCookie(cookie);
-        if (Objects.isNull(clientSessionId)) {
+        logger.info("Fetching Client Session Id from Cookie : {}", clientSessionId);
+        String verifiedClientSessionId = isValidClientSessionId(clientSessionId) ? clientSessionId : null;
+        logger.info("Verifying Client Session Id from Cookie : {}", verifiedClientSessionId);
+        if (Objects.isNull(verifiedClientSessionId)) {
             return getClientSessionIdFromHeaderOrQueryParams(httpRequest);
         }
-        return clientSessionId;
+        return verifiedClientSessionId;
     }
 
-    private static String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
-        String clientSessionId;
-        clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
+    private String getClientSessionIdFromHeaderOrQueryParams(HttpRequest httpRequest) {
+        String clientSessionId = httpRequest.getHeader(CLIENT_SESSION_ID);
         logger.info("Client Session Id from query param: {}", clientSessionId);
-        if (Objects.isNull(clientSessionId)) {
+
+        String verifiedClientSessionId = isValidClientSessionId(clientSessionId) ? clientSessionId : null;
+
+        if (Objects.isNull(verifiedClientSessionId)) {
             MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
             logger.info("Client Session Id is not available in header, now fetching from query parameter");
             if (!queryParameters.isEmpty()) {
                 List<String> queryParamSessionId = queryParameters.get(CLIENT_SESSION_ID);
-                clientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
-                logger.info("Client Session Id Fetched from query parameter : {}", clientSessionId);
+                String queryClientSessionId = !Objects.isNull(queryParamSessionId) && !queryParamSessionId.isEmpty() ? queryParamSessionId.get(0) : null;
+
+                logger.info("Client Session Id Fetched from query parameter before validation : {}", queryClientSessionId);
+                verifiedClientSessionId = isValidClientSessionId(queryClientSessionId) ? queryClientSessionId : null;
+                logger.info("Client Session Id Fetched from query parameter : {}", verifiedClientSessionId);
             }
         }
-        return clientSessionId;
+        return verifiedClientSessionId;
+    }
+
+    private boolean isValidClientSessionId(String clientSessionId){
+        if(Objects.isNull(clientSessionId)){
+            return false;
+        }
+        return getAuthenticatedAccountIdFromSession(clientSessionId) != null;
+    }
+
+    private String getAuthenticatedAccountIdFromSession(String clientSessionId){
+        if(Objects.isNull(clientSessionId)){
+            return null;
+        }
+        String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
+        logger.info("Received authenticatedAccountId from Session Manager : {}", authenticatedAccountId);
+        if(authenticatedAccountId != null){
+            return isAccountVerifiedInCurrentInvoker(authenticatedAccountId) ? authenticatedAccountId : null;
+        }
+        return null;
     }
 
     private String getAuthenticatedAccountId(String clientSessionId) {
         String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
-        logger.info("Received authenticatedAccountId from Session Manager : {}", authenticatedAccountId);
+        logger.info("Received authenticatedAccountId from Session Manager At getAuthenticatedAccountId: {}", authenticatedAccountId);
+//        authenticatedAccountId = isAccountVerifiedInCurrentInvoker(authenticatedAccountId) ? authenticatedAccountId : null;
         if (!Objects.isNull(authenticatedAccountId)) {
             try {
                 accountProvider.getAccount(authenticatedAccountId);
@@ -176,6 +205,10 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         }
         logger.info("No account found for clientSessionId: {}", clientSessionId);
         return null;
+    }
+
+    private boolean isAccountVerifiedInCurrentInvoker(String authenticatedAccountId) {
+        return oauthSessionStore.getSessionId(authenticatedAccountId) != null;
     }
 
     private String getClientSessionIdFromCookie(String cookie) {
