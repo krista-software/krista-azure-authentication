@@ -47,7 +47,7 @@ public class OauthSessionStore {
     }
 
     private void remove(String key) {
-        System.out.println("Removing Key : "+ key);
+        System.out.println("Removing Key : " + key);
         keyValueStore.remove(key);
     }
 
@@ -111,8 +111,10 @@ public class OauthSessionStore {
     }
 
     public void removeOAuthAttributes(String authContextId) {
-        if(authContextId == null){ return;}
-        System.out.println("Initialised to remove auth context Id : "+ authContextId);
+        if (authContextId == null) {
+            return;
+        }
+        System.out.println("Initialised to remove auth context Id : " + authContextId);
         this.remove(authContextId);
     }
 }

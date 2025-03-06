@@ -14,9 +14,7 @@ import com.microsoft.graph.http.GraphServiceException;
 import org.jvnet.hk2.annotations.Service;
 import org.slf4j.Logger;
 
-
 import javax.inject.Inject;
-
 import java.lang.reflect.MalformedParametersException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -29,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
-import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.TENANT_ID;
 
 @Service
 public class AzureOAuthService {
@@ -118,42 +115,42 @@ public class AzureOAuthService {
 
 
     public String updateTokens(String refreshToken) {
-            try {
-                this.attributes = oauthSessionStore.getInvokerAttributes();
-                logger.info("Refresh Token in Update Token");
+        try {
+            this.attributes = oauthSessionStore.getInvokerAttributes();
+            logger.info("Refresh Token in Update Token");
 
-                String scope = "User.Read";
-                Set<String> scopeSet = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());
-                // Build RefreshTokenParameters
-                RefreshTokenParameters refreshTokenParameters = RefreshTokenParameters.builder(scopeSet, refreshToken).build();
+            String scope = "User.Read";
+            Set<String> scopeSet = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());
+            // Build RefreshTokenParameters
+            RefreshTokenParameters refreshTokenParameters = RefreshTokenParameters.builder(scopeSet, refreshToken).build();
 
-                // Authenticate and acquire new token
-                AzureAuthenticationCredential azureAuthenticationCredential = getAzureAuthenticationCredential();
-                ConfidentialClientApplication clientApplication = buildClientApplication(azureAuthenticationCredential);
+            // Authenticate and acquire new token
+            AzureAuthenticationCredential azureAuthenticationCredential = getAzureAuthenticationCredential();
+            ConfidentialClientApplication clientApplication = buildClientApplication(azureAuthenticationCredential);
 
-                CompletableFuture<IAuthenticationResult> iAuthCompletableFuture  = clientApplication.acquireToken(refreshTokenParameters);
-                IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
+            CompletableFuture<IAuthenticationResult> iAuthCompletableFuture = clientApplication.acquireToken(refreshTokenParameters);
+            IAuthenticationResult iAuthenticationResult = iAuthCompletableFuture.join();
 
-                storeRefreshToken(clientApplication, iAuthenticationResult);
-                return iAuthenticationResult.accessToken(); // Return the new access token
+            storeRefreshToken(clientApplication, iAuthenticationResult);
+            return iAuthenticationResult.accessToken(); // Return the new access token
 
-            } catch (GraphServiceException cause) {
-                logger.error("Error refreshing token: {}", cause.getMessage(), cause);
+        } catch (GraphServiceException cause) {
+            logger.error("Error refreshing token: {}", cause.getMessage(), cause);
 
-                NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, attributes.get(CLIENT_ID), Map.of(), Map.of());
-                NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, attributes.get(CLIENT_SECRET), Map.of(), Map.of());
-                NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, attributes.get(TENANT_ID), Map.of(), Map.of());
-                String authContextId = getAuthContextId(attributes.get(CLIENT_ID), attributes.get(CLIENT_SECRET), attributes.get(TENANT_ID));
+            NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, attributes.get(CLIENT_ID), Map.of(), Map.of());
+            NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, attributes.get(CLIENT_SECRET), Map.of(), Map.of());
+            NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, attributes.get(TENANT_ID), Map.of(), Map.of());
+            String authContextId = getAuthContextId(attributes.get(CLIENT_ID), attributes.get(CLIENT_SECRET), attributes.get(TENANT_ID));
 
-                logger.info("AT Refresh Token Auth contextID : {}", authContextId);
-                NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
+            logger.info("AT Refresh Token Auth contextID : {}", authContextId);
+            NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
 
-                throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
-            } catch (Exception cause) {
+            throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
+        } catch (Exception cause) {
 
-                logger.error("Invalid Token: {}", cause.getMessage(), cause);
-                throw new RuntimeException(cause);
-            }
+            logger.error("Invalid Token: {}", cause.getMessage(), cause);
+            throw new RuntimeException(cause);
+        }
     }
 
     public String getAuthContextId(String clientId, String clientSecret, String tenantId) {
@@ -165,7 +162,6 @@ public class AzureOAuthService {
         ));
         return authContextId;
     }
-
 
 
     public String extractRefreshToken(String tokenCache) {

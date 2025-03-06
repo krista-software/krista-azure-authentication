@@ -3,7 +3,10 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.servi
 import app.krista.extension.authorization.AuthorizationException;
 import app.krista.extension.executor.Invoker;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.EmailAddresses;
-import app.krista.ksdk.accounts.*;
+import app.krista.ksdk.accounts.Account;
+import app.krista.ksdk.accounts.AccountManager;
+import app.krista.ksdk.accounts.AttributeManager;
+import app.krista.ksdk.accounts.ModifiableAccount;
 import app.krista.ksdk.authorization.ModifiableRole;
 import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
@@ -74,20 +77,20 @@ public final class AccountProvisioner {
                 SOURCE, "OMNI")
                 :
                 Map.of(ORG, "KristaSoft",
-                KRISTA_SOURCE, "EXTENSION_AZURE_AUTHENTICATION");
+                        KRISTA_SOURCE, "EXTENSION_AZURE_AUTHENTICATION");
     }
 
     private void createAttributesIfNotExist() {
-        if(verifyAttributeExists(ORG)){
+        if (verifyAttributeExists(ORG)) {
             createAttribute(ORG);
         }
-        if(verifyAttributeExists(KRISTA_SOURCE)){
+        if (verifyAttributeExists(KRISTA_SOURCE)) {
             createAttribute(KRISTA_SOURCE);
         }
-        if(verifyAttributeExists(KRISTA_LAST_LOGIN)){
+        if (verifyAttributeExists(KRISTA_LAST_LOGIN)) {
             createAttribute(KRISTA_LAST_LOGIN);
         }
-        if(verifyAttributeExists(SOURCE)){
+        if (verifyAttributeExists(SOURCE)) {
             createAttribute(SOURCE);
         }
     }
@@ -95,8 +98,8 @@ public final class AccountProvisioner {
     private boolean verifyAttributeExists(String attribute) {
         try {
             return attributeManager.lookupAttribute(attribute) == null;
-        }catch (RuntimeException cause){
-            logger.error("Attribute Does not Exists : Attribute Name  {}   : {}",attribute, cause.getMessage(), cause);
+        } catch (RuntimeException cause) {
+            logger.error("Attribute Does not Exists : Attribute Name  {}   : {}", attribute, cause.getMessage(), cause);
         }
         return true;
     }

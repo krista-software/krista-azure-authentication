@@ -60,16 +60,16 @@ public class AzureAuthenticationExtension {
 
 @InvokerRequest(InvokerRequest.Type.VALIDATE_ATTRIBUTES)
 public void validateAttributes(Map<String, String> attributes) {
-    if (Objects.isNull(invoker.getAttributes()) || invoker.getAttributes().isEmpty()) {
-        logger.info("INVOKER ATT are null");
+    if (!authorizationContext.isWorkspaceAdmin()) {
+        logger.info("User is Not Workspace admin");
         return;
     }
     String clientId = attributes.get(CLIENT_ID);
     String clientSecret = attributes.get(CLIENT_SECRET);
     String tenantId = attributes.get(TENANT_ID);
     Account authorizedAccount = authorizationContext.getAuthorizedAccount();
-    logger.info("IS workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
     logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
+    logger.info("Is workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
     String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
     if (Objects.isNull(refreshToken)) {
         logger.info("Refresh Token is Null");

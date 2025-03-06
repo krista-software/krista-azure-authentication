@@ -1,7 +1,6 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 
 import app.krista.extension.authorization.AuthorizationException;
-import app.krista.extension.impl.jaxrs.Header;
 import app.krista.extension.impl.jaxrs.util.Resources;
 import app.krista.extensions.essentials.collaboration.azureauthentication.common.AuthenticationResponse;
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
@@ -10,7 +9,6 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.store.
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
-import app.krista.ksdk.accounts.AccountProvider;
 import app.krista.ksdk.accounts.ModifiableAccount;
 import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
@@ -24,11 +22,8 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -90,7 +85,7 @@ public class AzureAuthenticationExtensionApiResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
-        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId() , clientSessionId);
+        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId(), clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
         logger.info("Account Id is fetched from Auth Session Store at Login");
         ModifiableAccount account = accountManager.getAccount(accountId);
