@@ -193,7 +193,6 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
     private String getAuthenticatedAccountId(String clientSessionId) {
         String authenticatedAccountId = sessionManager.lookupAccountId(clientSessionId);
         logger.info("Received authenticatedAccountId from Session Manager At getAuthenticatedAccountId: {}", authenticatedAccountId);
-//        authenticatedAccountId = isAccountVerifiedInCurrentInvoker(authenticatedAccountId) ? authenticatedAccountId : null;
         if (!Objects.isNull(authenticatedAccountId)) {
             try {
                 accountProvider.getAccount(authenticatedAccountId);
