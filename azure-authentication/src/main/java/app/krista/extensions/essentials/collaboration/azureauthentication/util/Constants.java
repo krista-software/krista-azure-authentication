@@ -14,7 +14,6 @@ public class Constants {
     public static final String X_KRISTA_CONTEXT = "X-Krista-Context";
     public static final String COMMENT = "comment";
     public static final String COOKIE = "Cookie";
-    public static final String EQUAL_TO = "=";
     public static final String BLANK_SPACE = " ";
     public static final String CODE = "code";
     public static final String STATE = "state";

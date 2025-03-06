@@ -1,7 +1,6 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.util;
 
 import app.krista.extension.authorization.AuthorizationException;
-import app.krista.ksdk.accounts.AccountManager;
 import app.krista.ksdk.authentication.AuthenticationSettings;
 
 import java.text.DateFormat;
@@ -145,30 +144,6 @@ public final class CommonUtils {
             if (!isSupportedFromExtension && !isSupportedFromWorkSpace) {
                 throw new IllegalArgumentException(
                         "Domain " + email.substring(email.indexOf("@") + 1) + " is not supported.");
-            }
-        }
-    }
-
-    public static void validateAutoUserCreation(String workspaceId, String email, boolean allowAutoUserCreationBool,
-                                                String supportedDomain, AccountManager accountManager) throws AuthorizationException {
-        if (workspaceId == null || workspaceId.isEmpty()) {
-            throw new IllegalArgumentException("WorkspaceId not found.");
-        }
-        if (!isValidEmail(email)) {
-            throw new IllegalArgumentException("Not valid email address: " + email);
-        }
-        if (!allowAutoUserCreationBool) {
-            boolean isEmailDomainPresent =
-                    isEmailDomainPresentInSupportedWorkspaceDomains(email, supportedDomain);
-            if (!isEmailDomainPresent) {
-                throw new IllegalArgumentException(
-                        "ALLOW_AUTO_PERSON_CREATION is not enabled and domain for email " + email +
-                                " is not supported in workspace.");
-            }
-
-            if (accountManager.lookupAccount(email) == null) {
-                throw new IllegalArgumentException(
-                        "ALLOW_AUTO_PERSON_CREATION is not enabled. Can't add new user with email :" + email);
             }
         }
     }
