@@ -54,6 +54,7 @@ public class AzureAuthenticationExtension {
 
     @InvokerRequest(InvokerRequest.Type.AUTHENTICATOR)
     public RequestAuthenticator getAuthenticatedAccountId() {
+        logger.info("RequestAuthenticator called");
         return requestAuthenticator;
     }
 
@@ -71,7 +72,7 @@ public void validateAttributes(Map<String, String> attributes) {
     logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
     String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
     if (Objects.isNull(refreshToken)) {
-        logger.info("Access Token is Null");
+        logger.info("Refresh Token is Null");
         NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
         NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, clientSecret, Map.of(), Map.of());
         NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, tenantId, Map.of(), Map.of());
@@ -82,14 +83,14 @@ public void validateAttributes(Map<String, String> attributes) {
         throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
     }
     logger.info("Processed After Auth");
-    String accessToken = getAccessToken(CompletableFuture.completedFuture(refreshToken));
+    String accessToken = getAccessToken(refreshToken);
 
     logger.info("Access Token Received");
     String email = userInfoService.getEmail(CompletableFuture.completedFuture(accessToken));
     logger.info("user: {} authorized", email);
 }
 
-    private String getAccessToken(CompletableFuture<String> refreshToken) {
+    private String getAccessToken(String refreshToken) {
         return azureOAuthService.updateTokens(refreshToken);
     }
 

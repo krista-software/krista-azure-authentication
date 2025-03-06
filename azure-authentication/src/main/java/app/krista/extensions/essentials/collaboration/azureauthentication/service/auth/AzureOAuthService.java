@@ -117,17 +117,15 @@ public class AzureOAuthService {
     }
 
 
-    public String updateTokens(CompletableFuture<String> refreshToken) {
+    public String updateTokens(String refreshToken) {
             try {
                 this.attributes = oauthSessionStore.getInvokerAttributes();
-
-                String token = refreshToken.join();
                 logger.info("Refresh Token in Update Token");
 
                 String scope = "User.Read";
                 Set<String> scopeSet = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());
                 // Build RefreshTokenParameters
-                RefreshTokenParameters refreshTokenParameters = RefreshTokenParameters.builder(scopeSet, token).build();
+                RefreshTokenParameters refreshTokenParameters = RefreshTokenParameters.builder(scopeSet, refreshToken).build();
 
                 // Authenticate and acquire new token
                 AzureAuthenticationCredential azureAuthenticationCredential = getAzureAuthenticationCredential();
