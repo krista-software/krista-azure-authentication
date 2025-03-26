@@ -10,32 +10,8 @@ import java.util.stream.Collectors;
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
 
 public class AzureAuthenticationCredentialBuilder {
-    private String defaultRole;
-    private String clientId;
-    private String clientSecret;
-    private String tenantId;
     private String routingUrl;
     private final Set<String> scopes = new HashSet<>();
-
-    public AzureAuthenticationCredentialBuilder defaultRole(String defaultRole) {
-        this.defaultRole = defaultRole;
-        return this;
-    }
-
-    public AzureAuthenticationCredentialBuilder clientId(String clientId) {
-        this.clientId = clientId;
-        return this;
-    }
-
-    public AzureAuthenticationCredentialBuilder clientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-        return this;
-    }
-
-    public AzureAuthenticationCredentialBuilder tenantId(String tenantId) {
-        this.tenantId = tenantId;
-        return this;
-    }
 
     public AzureAuthenticationCredentialBuilder routingUrl(String routingUrl) {
         this.routingUrl = routingUrl;
@@ -55,11 +31,6 @@ public class AzureAuthenticationCredentialBuilder {
         } catch (IOException cause) {
             throw new FileOperationException("Failed to load public configuration file.", cause);
         }
-    }
-
-    public AzureAuthenticationCredential build() {
-        scopes.add("User.Read");
-        return new AzureAuthenticationCredential(new OAuthCredentialImpl(clientId, clientSecret, tenantId), scopes, routingUrl);
     }
 
     public AzureAuthenticationCredential build(Map<String, String> attributes) {

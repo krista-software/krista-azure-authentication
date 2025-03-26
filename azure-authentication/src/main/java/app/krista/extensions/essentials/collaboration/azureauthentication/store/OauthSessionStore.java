@@ -8,10 +8,11 @@ import org.jvnet.hk2.annotations.Service;
 
 import javax.inject.Inject;
 import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class OauthSessionStore {
+    public static final String OAUTH_KEY = "OAuthKey";
     private final KeyValueStore keyValueStore;
     private final GsonJsonMapper gsonJsonMapper;
 
@@ -25,40 +26,33 @@ public class OauthSessionStore {
         return keyValueStore.get(key);
     }
 
-    public String getAccessToken(String email) {
-        return (String) this.get(getAccessTokenKey(email));
+    public String getRefreshToken(String email) {
+        return (String) this.get(getRefreshTokenKey(email));
     }
 
     private String getAccessTokenKey(String email) {
         return "access_token_" + email;
     }
 
-    public void removeAccessToken(String email) {
-        this.remove(getAccessTokenKey(email));
+    private String getRefreshTokenKey(String email) {
+        return "refresh_token_" + email;
     }
 
     private void remove(String key) {
+        System.out.println("Removing Key : " + key);
         keyValueStore.remove(key);
-    }
-
-    public boolean doesAccessTokenExist(String email) {
-        return this.contains(getAccessToken(email));
-    }
-
-    private boolean contains(String key) {
-        return keyValueStore.contains(key);
     }
 
     public void saveAccessToken(String email, String refreshToken) {
         this.put(getAccessTokenKey(email), refreshToken);
     }
 
-    private void put(String key, Object value) {
-        keyValueStore.put(key, value);
+    public void saveRefreshToken(String email, String refreshToken) {
+        this.put(getRefreshTokenKey(email), refreshToken);
     }
 
-    public Set<String> getKeys() {
-        return keyValueStore.getKeys();
+    private void put(String key, Object value) {
+        keyValueStore.put(key, value);
     }
 
     public void saveSessionId(String accountId, String sessionId) {
@@ -75,14 +69,28 @@ public class OauthSessionStore {
     }
 
     public void saveInvokerAttributes(Map<String, String> invokerAttributes) {
-        keyValueStore.put(toOauthKey(), gsonJsonMapper.toString(invokerAttributes));
+        keyValueStore.put(OAUTH_KEY, gsonJsonMapper.toString(invokerAttributes));
     }
 
     public Map<String, String> getInvokerAttributes() {
-        return gsonJsonMapper.fromString(keyValueStore.get(toOauthKey()).toString(), JavaTypes.getTypedClass(Map.class, String.class, String.class));
+        return gsonJsonMapper.fromString(keyValueStore.get(OAUTH_KEY).toString(), JavaTypes.getTypedClass(Map.class, String.class, String.class));
     }
 
-    private String toOauthKey() {
-        return "OAuthKey"; //NOSONAR
+    public String storeAuthCredentials(Map<String, String> oauthAttributes) {
+        String authContextId = UUID.randomUUID().toString();
+        keyValueStore.put(authContextId, gsonJsonMapper.toString(oauthAttributes));
+        return authContextId;
+    }
+
+    public Map<String, String> getOAuthAttributes(String authContextId) {
+        return gsonJsonMapper.fromString(keyValueStore.get(authContextId).toString(), JavaTypes.getTypedClass(Map.class, String.class, String.class));
+    }
+
+    public void removeOAuthAttributes(String authContextId) {
+        if (authContextId == null) {
+            return;
+        }
+        System.out.println("Initialised to remove auth context Id : " + authContextId);
+        this.remove(authContextId);
     }
 }

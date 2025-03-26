@@ -5,13 +5,18 @@ import app.krista.extension.executor.Invoker;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.EmailAddresses;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
+import app.krista.ksdk.accounts.AttributeManager;
 import app.krista.ksdk.accounts.ModifiableAccount;
 import app.krista.ksdk.authorization.ModifiableRole;
 import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
+import app.krista.model.field.Field;
 import app.krista.omni.sdk.spi.impl.services.AccountService;
 import app.krista.omni.sdk.spi.impl.util.Strings;
+import org.jetbrains.annotations.NotNull;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.text.DateFormat;
@@ -26,33 +31,81 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
 @Service
 public final class AccountProvisioner {
     public static final String DEFAULT_ROLE_FOR_NEW_ACCOUNT = "Krista Guest User";
+    public static final String ORG = "ORG";
+    public static final String KRISTA_SOURCE = "KRISTA_SOURCE";
+    public static final String KRISTA_LAST_LOGIN = "KRISTA_LAST_LOGIN";
+    public static final String SOURCE = "SOURCE";
 
+
+    private final Logger logger = LoggerFactory.getLogger(AccountProvisioner.class);
     private final AccountManager accountManager;
     private final RoleManager roleManager;
     private final Invoker invoker;
+    private final AttributeManager attributeManager;
 
     @Inject
-    public AccountProvisioner(AccountManager accountManager, RoleManager roleManager, Invoker invoker) {
+    public AccountProvisioner(AccountManager accountManager, RoleManager roleManager, Invoker invoker, AttributeManager attributeManager) {
         this.accountManager = accountManager;
         this.roleManager = roleManager;
         this.invoker = invoker;
 
+        this.attributeManager = attributeManager;
     }
 
     public Account provisionAccount(String emailAddress) {
         String roleName = createRoleIfNotPresent();
+
         ModifiableAccount modifiableAccount = accountManager.lookupAccount(emailAddress);
         List<String> roleNames = ensureHasAllRoles(modifiableAccount, roleName);
         if (modifiableAccount == null) {
             modifiableAccount = accountManager.createAccount(EmailAddresses.getLocalPart(emailAddress),
                     EmailAddresses.normalizeEmailAddress(emailAddress),
                     new LinkedHashSet<>(roleNames),
-                    emailAddress.endsWith(Strings.AT + AccountService.SUPPORTED_DOMAIN) ? Map.of("ORG", "KristaSoft",
-                            "KRISTA_SOURCE", "Omni Chatbot",
-                            "KRISTA_LAST_LOGIN", getCurrentDateTime(),
-                            "SOURCE", "OMNI") : Map.of());
+                    getAttributes(emailAddress));
         }
         return modifiableAccount;
+    }
+
+    @NotNull
+    private Map<String, Object> getAttributes(String emailAddress) {
+        createAttributesIfNotExist();
+
+        return emailAddress.endsWith(Strings.AT + AccountService.SUPPORTED_DOMAIN)
+                ? Map.of(ORG, "KristaSoft",
+                KRISTA_SOURCE, "Omni Chatbot",
+                KRISTA_LAST_LOGIN, getCurrentDateTime(),
+                SOURCE, "OMNI")
+                :
+                Map.of(ORG, "KristaSoft",
+                        KRISTA_SOURCE, "EXTENSION_AZURE_AUTHENTICATION");
+    }
+
+    private void createAttributesIfNotExist() {
+        if (verifyAttributeExists(ORG)) {
+            createAttribute(ORG);
+        }
+        if (verifyAttributeExists(KRISTA_SOURCE)) {
+            createAttribute(KRISTA_SOURCE);
+        }
+        if (verifyAttributeExists(KRISTA_LAST_LOGIN)) {
+            createAttribute(KRISTA_LAST_LOGIN);
+        }
+        if (verifyAttributeExists(SOURCE)) {
+            createAttribute(SOURCE);
+        }
+    }
+
+    private boolean verifyAttributeExists(String attribute) {
+        try {
+            return attributeManager.lookupAttribute(attribute) == null;
+        } catch (RuntimeException cause) {
+            logger.error("Attribute Does not Exists : Attribute Name  {}   : {}", attribute, cause.getMessage(), cause);
+        }
+        return true;
+    }
+
+    private void createAttribute(String attributeName) {
+        attributeManager.createAttribute(attributeName, new Field("Text", Map.of(), Map.of()));
     }
 
     private List<String> ensureHasAllRoles(ModifiableAccount modifiableAccount, String roleName)

@@ -36,54 +36,6 @@ public class AuthenticationResponse {
         this.extras = extras;
     }
 
-    public String getClientSessionId() {
-        return clientSessionId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    public String getAccountId() {
-        return accountId;
-    }
-
-    public String getPersonId() {
-        return personId;
-    }
-
-    public List<String> getRoles() {
-        return roles;
-    }
-
-    public String getInboxId() {
-        return inboxId;
-    }
-
-    public boolean isWorkspaceAdmin() {
-        return isWorkspaceAdmin;
-    }
-
-    public boolean isApplianceManager() {
-        return isApplianceManager;
-    }
-
-    public Map<String, String> getIdentificationToken() {
-        return identificationToken;
-    }
-
-    public Map<String, Object> getExtras() {
-        return extras;
-    }
-
-    public String getKristaAccountId() {
-        return kristaAccountId;
-    }
-
     @Override
     public String toString() {
         return "AuthenticationResponse{" +

@@ -18,6 +18,7 @@ public class UserInfoService implements UserInfoServiceInterface {
      * @param accessTokenFuture a CompletableFuture of String representing the access token
      * @return a String representing the user's email
      */
+    @Override
     public String getEmail(CompletableFuture<String> accessTokenFuture) {
         GraphServiceClient<Request> graphClient = GraphServiceClient
                 .builder()

@@ -1,7 +1,6 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 
 import app.krista.extension.authorization.AuthorizationException;
-import app.krista.extension.impl.jaxrs.Header;
 import app.krista.extension.impl.jaxrs.util.Resources;
 import app.krista.extensions.essentials.collaboration.azureauthentication.common.AuthenticationResponse;
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
@@ -10,7 +9,6 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.store.
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
-import app.krista.ksdk.accounts.AccountProvider;
 import app.krista.ksdk.accounts.ModifiableAccount;
 import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
@@ -24,11 +22,8 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -90,10 +85,13 @@ public class AzureAuthenticationExtensionApiResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
-        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount(), clientSessionId);
+        logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId(), clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
+        logger.info("Account Id is fetched from Auth Session Store at Login");
         ModifiableAccount account = accountManager.getAccount(accountId);
+        logger.info("Account is fetched from From Account Manager at Login");
         AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId);
+        logger.info("AuthenticationResponse is Generated");
         int maxAgeInSeconds = getMaxAgeInSeconds();
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
         NewCookie sessionCookie = new NewCookie(Constants.CHATBOT_SESSION_ID,
@@ -109,12 +107,15 @@ public class AzureAuthenticationExtensionApiResource {
     @Path("/callback")
     public Response getCallbackResponse(@QueryParam(CODE) String code, @QueryParam(STATE) String state, @CookieParam(Constants.CHATBOT_SESSION_ID) Cookie sessionCookieInRequest) {
         if (authorizationContext.getAuthorizedAccount() == null) {
+            logger.info("UnAuthorized Account At getCallbackResponse");
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
         String sessionId = oauthSessionStore.getSessionId(authorizationContext.getAuthorizedAccount().getAccountId());
+        logger.info("Session Id is fetched from Auth Session Store At getCallbackResponse");
         try {
             Response response = Resources.getTranslatedResource(getClass(),
                     "index.html", Map.of("_clientSessionId_", sessionId));
+            logger.info("Client Session Id Response Created At getCallbackResponse");
             if (!Objects.isNull(sessionCookieInRequest) && !sessionCookieInRequest.getValue().isBlank()) {
                 return Response.ok(response.getEntity())
                         .header(Constants.CHATBOT_SESSION_ID, sessionCookieInRequest.getValue())
