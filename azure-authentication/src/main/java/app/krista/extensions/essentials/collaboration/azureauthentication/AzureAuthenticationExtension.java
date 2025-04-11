@@ -11,6 +11,7 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.util.C
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.model.field.NamedValuedField;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,35 +62,48 @@ public class AzureAuthenticationExtension {
 
     @InvokerRequest(InvokerRequest.Type.VALIDATE_ATTRIBUTES)
     public void validateAttributes(Map<String, String> attributes) {
-        if (!authorizationContext.isWorkspaceAdmin() && isSetupRoleChanged((String) attributes.get(DEFAULT_ROLE_KEY))) {
+        if (!authorizationContext.isWorkspaceAdmin() && isSetupRoleChanged(attributes.get(DEFAULT_ROLE_KEY))) {
             logger.info("User is Not Workspace admin");
             return;
         }
-        String clientId = attributes.get(CLIENT_ID);
-        String clientSecret = attributes.get(CLIENT_SECRET);
-        String tenantId = attributes.get(TENANT_ID);
-        String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
-        Account authorizedAccount = authorizationContext.getAuthorizedAccount();
-        logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
-        logger.info("Is workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
-        String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
-        if (Objects.isNull(refreshToken)) {
-            logger.info("Refresh Token is Null");
-            NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
-            NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, clientSecret, Map.of(), Map.of());
-            NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, tenantId, Map.of(), Map.of());
-            String authContextId = getAuthContextId(clientId, clientSecret, tenantId, defaultRole);
-            logger.info("Auth contextID : {}", authContextId);
-            NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
 
-            throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
+        String refreshToken = getRefreshToken(attributes);
+        if (Objects.isNull(refreshToken)) {
+            throwMustAuthorizationException(attributes);
         }
+
         logger.info("Processed After Auth");
         String accessToken = getAccessToken(refreshToken);
 
         logger.info("Access Token Received");
         String email = userInfoService.getEmail(CompletableFuture.completedFuture(accessToken));
         logger.info("user: {} authorized", email);
+    }
+
+    @Nullable
+    private String getRefreshToken(Map<String, String> attributes) {
+        Account authorizedAccount = authorizationContext.getAuthorizedAccount();
+        logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
+        logger.info("Is workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
+        return !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
+    }
+
+    private void throwMustAuthorizationException(Map<String, String> attributes) {
+
+        String clientId = attributes.get(CLIENT_ID);
+        String clientSecret = attributes.get(CLIENT_SECRET);
+        String tenantId = attributes.get(TENANT_ID);
+        String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
+
+        logger.info("Refresh Token is Null");
+        NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
+        NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, clientSecret, Map.of(), Map.of());
+        NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, tenantId, Map.of(), Map.of());
+        String authContextId = getAuthContextId(clientId, clientSecret, tenantId, defaultRole);
+        logger.info("Auth contextID : {}", authContextId);
+        NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
+
+        throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
     }
 
     private boolean isSetupRoleChanged(String incomingDefaultRole) {
