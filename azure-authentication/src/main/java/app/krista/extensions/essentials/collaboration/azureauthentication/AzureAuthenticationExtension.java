@@ -126,7 +126,7 @@ public class AzureAuthenticationExtension {
             Map<String, String> invokerDetails = oauthSessionStore.getInvokerAttributes();
             return !invokerDetails.equals(attributes);
         } catch (RuntimeException e) {
-            logger.error("Invoker Credential Details are not Available: {}", e.getMessage(),e);
+            logger.error("Invoker Credential Details are not Available: {}", e.getMessage(), e);
             return true;
         }
     }
