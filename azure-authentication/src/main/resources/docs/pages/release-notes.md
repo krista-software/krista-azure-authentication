@@ -1,8 +1,13 @@
 # Release Notes - Azure Authentication Extension
 
-## Version 1.0.0
+## Version 1.0.1
 
-- **Developer Name** : <i>Gaurav Baranwal</i>
-- **Krista Service APIs Java** : 1.0.104
-- **Global Catalog Version** : 1.0.51
-- **Appliance Release Version** : 3.3.8
+- **Developer Name** : <i>Vrushali Gaikwad</i>
+- **Krista Service APIs Java** : 1.0.112
+- **Global Catalog Version** : 1.0.57
+- **Appliance Release Version** : 3.4.7
+
+## Resolved Issues
+- **KR-16014 - Azure Authentication :- Validation error message not displayed correctly for an invalid role in Azure Authentication.
+
+## Known Issues

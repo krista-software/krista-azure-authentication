@@ -2,6 +2,7 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.servi
 
 import app.krista.extension.authorization.AuthorizationException;
 import app.krista.extension.executor.Invoker;
+import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.EmailAddresses;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
@@ -42,14 +43,15 @@ public final class AccountProvisioner {
     private final RoleManager roleManager;
     private final Invoker invoker;
     private final AttributeManager attributeManager;
+    private final OauthSessionStore oauthSessionStore;
 
     @Inject
-    public AccountProvisioner(AccountManager accountManager, RoleManager roleManager, Invoker invoker, AttributeManager attributeManager) {
+    public AccountProvisioner(AccountManager accountManager, RoleManager roleManager, Invoker invoker, AttributeManager attributeManager, OauthSessionStore oauthSessionStore) {
         this.accountManager = accountManager;
         this.roleManager = roleManager;
         this.invoker = invoker;
-
         this.attributeManager = attributeManager;
+        this.oauthSessionStore = oauthSessionStore;
     }
 
     public Account provisionAccount(String emailAddress) {
@@ -145,8 +147,10 @@ public final class AccountProvisioner {
 
     private String getDefaultRole() {
         String defaultRole = DEFAULT_ROLE_FOR_NEW_ACCOUNT;
-        Object defaultRoleObject = invoker.getAttributes().get(DEFAULT_ROLE_KEY);
-        if (defaultRoleObject instanceof String && !((String) defaultRoleObject).trim().isEmpty()) {
+
+        Map<String, String> invokerAttributes = oauthSessionStore.getInvokerAttributes();
+        String defaultRoleObject = invokerAttributes.getOrDefault(DEFAULT_ROLE_KEY, (String) invoker.getAttributes().get(DEFAULT_ROLE_KEY));
+        if (defaultRoleObject != null && !((String) defaultRoleObject).trim().isEmpty()) {
             defaultRole = (String) defaultRoleObject;
         }
         return defaultRole;

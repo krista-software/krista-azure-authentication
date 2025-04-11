@@ -11,6 +11,7 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.util.C
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.model.field.NamedValuedField;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,12 +27,13 @@ import static app.krista.extensions.essentials.collaboration.azureauthentication
         ecosystemId = "catEntryEcosystem_d3b05047-07b0-4b06-95a3-9fb8f7f608d9",
         ecosystemName = "Krista",
         ecosystemVersion = "3e7e09ed-688f-41fa-ab7c-ff879e750011")
-@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.0-rc3")
+@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.1-rc1")
 @Field.Text(name = AzureAuthenticationExtension.DEFAULT_ROLE_KEY, required = false)
 @Field.Text(name = CLIENT_ID)
 @Field.Text(name = Constants.CLIENT_SECRET, isSecured = true)
 @Field.Text(name = Constants.TENANT_ID)
 @StaticResource(path = "docs", file = "docs")
+@Java(version = Java.Version.JAVA_21)
 public class AzureAuthenticationExtension {
     public static final String DEFAULT_ROLE_KEY = "default_role";
     private final Logger logger = LoggerFactory.getLogger(AzureAuthenticationExtension.class);
@@ -58,50 +60,78 @@ public class AzureAuthenticationExtension {
         return requestAuthenticator;
     }
 
-@InvokerRequest(InvokerRequest.Type.VALIDATE_ATTRIBUTES)
-public void validateAttributes(Map<String, String> attributes) {
-    if (!authorizationContext.isWorkspaceAdmin()) {
-        logger.info("User is Not Workspace admin");
-        return;
+    @InvokerRequest(InvokerRequest.Type.VALIDATE_ATTRIBUTES)
+    public void validateAttributes(Map<String, String> attributes) {
+        if (!authorizationContext.isWorkspaceAdmin() && isSetupRoleChanged(attributes.get(DEFAULT_ROLE_KEY))) {
+            logger.info("User is Not Workspace admin");
+            return;
+        }
+
+        String refreshToken = getRefreshToken(attributes);
+        if (Objects.isNull(refreshToken)) {
+            throwMustAuthorizationException(attributes);
+        }
+
+        logger.info("Processed After Auth");
+        String accessToken = getAccessToken(refreshToken);
+
+        logger.info("Access Token Received");
+        String email = userInfoService.getEmail(CompletableFuture.completedFuture(accessToken));
+        logger.info("user: {} authorized", email);
     }
-    String clientId = attributes.get(CLIENT_ID);
-    String clientSecret = attributes.get(CLIENT_SECRET);
-    String tenantId = attributes.get(TENANT_ID);
-    Account authorizedAccount = authorizationContext.getAuthorizedAccount();
-    logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
-    logger.info("Is workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
-    String refreshToken = !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
-    if (Objects.isNull(refreshToken)) {
+
+    @Nullable
+    private String getRefreshToken(Map<String, String> attributes) {
+        Account authorizedAccount = authorizationContext.getAuthorizedAccount();
+        logger.info("Who Is Authorized Account Holder : {}", authorizedAccount.getPrimaryEmailAddress());
+        logger.info("Is workSpace Admin : {}", authorizationContext.isWorkspaceAdmin());
+        return !areAttributesUpdated(attributes) ? oauthSessionStore.getRefreshToken(authorizedAccount.getPrimaryEmailAddress()) : null;
+    }
+
+    private void throwMustAuthorizationException(Map<String, String> attributes) {
+
+        String clientId = attributes.get(CLIENT_ID);
+        String clientSecret = attributes.get(CLIENT_SECRET);
+        String tenantId = attributes.get(TENANT_ID);
+        String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
+
         logger.info("Refresh Token is Null");
         NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
         NamedValuedField clientSecretField = new NamedValuedField(CLIENT_SECRET, TEXT_FIELD_TYPE, clientSecret, Map.of(), Map.of());
         NamedValuedField tenantIdField = new NamedValuedField(TENANT_ID, TEXT_FIELD_TYPE, tenantId, Map.of(), Map.of());
-        String authContextId = getAuthContextId(clientId, clientSecret, tenantId);
+        String authContextId = getAuthContextId(clientId, clientSecret, tenantId, defaultRole);
         logger.info("Auth contextID : {}", authContextId);
         NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
 
         throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
     }
-    logger.info("Processed After Auth");
-    String accessToken = getAccessToken(refreshToken);
 
-    logger.info("Access Token Received");
-    String email = userInfoService.getEmail(CompletableFuture.completedFuture(accessToken));
-    logger.info("user: {} authorized", email);
-}
+    private boolean isSetupRoleChanged(String incomingDefaultRole) {
+        if (incomingDefaultRole == null || incomingDefaultRole.isBlank()) {
+            return false;
+        }
+        Map<String, Object> attributes = invoker.getAttributes();
+        String roleStoredInInvoker = (String) attributes.getOrDefault(DEFAULT_ROLE_KEY, "");
+
+        if (!roleStoredInInvoker.isBlank() && roleStoredInInvoker.equals(incomingDefaultRole)) {
+            return false;
+        }
+        return true;
+    }
 
     private String getAccessToken(String refreshToken) {
         return azureOAuthService.updateTokens(refreshToken);
     }
 
 
-    private String getAuthContextId(String clientId, String clientSecret, String tenantId) {
+    private String getAuthContextId(String clientId, String clientSecret, String tenantId, String defaultRole) {
         String authContextId;
         authContextId = oauthSessionStore.storeAuthCredentials(Map.of(
-                 CLIENT_ID, clientId,
-                 CLIENT_SECRET, clientSecret,
-                 TENANT_ID, tenantId
-         ));
+                CLIENT_ID, clientId,
+                CLIENT_SECRET, clientSecret,
+                TENANT_ID, tenantId,
+                DEFAULT_ROLE_KEY, defaultRole
+        ));
         return authContextId;
     }
 
@@ -110,7 +140,7 @@ public void validateAttributes(Map<String, String> attributes) {
             Map<String, String> invokerDetails = oauthSessionStore.getInvokerAttributes();
             return !invokerDetails.equals(attributes);
         } catch (RuntimeException e) {
-            logger.error("Invoker Credential Details are not Available: {}", e.getMessage(),e);
+            logger.error("Invoker Credential Details are not Available: {}", e.getMessage(), e);
             return true;
         }
     }
