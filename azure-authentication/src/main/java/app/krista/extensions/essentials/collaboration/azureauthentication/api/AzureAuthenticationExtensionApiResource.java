@@ -1,7 +1,10 @@
 package app.krista.extensions.essentials.collaboration.azureauthentication.api;
 
 import app.krista.extension.authorization.AuthorizationException;
+import app.krista.extension.executor.Invoker;
 import app.krista.extension.impl.jaxrs.util.Resources;
+import app.krista.extension.request.RoutingInfo;
+import app.krista.extension.request.protos.http.HttpProtocol;
 import app.krista.extensions.essentials.collaboration.azureauthentication.common.AuthenticationResponse;
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
@@ -14,6 +17,7 @@ import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
 import app.krista.ksdk.context.AuthorizationContext;
 import app.krista.ksdk.context.RuntimeContext;
+import app.krista.model.field.util.GsonJsonMapper;
 import app.krista.omni.sdk.spi.util.GsonJsonMapperImpl;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
@@ -24,6 +28,8 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -43,15 +49,17 @@ public class AzureAuthenticationExtensionApiResource {
     private final RuntimeContext runtimeContext;
     private final RoleManager roleManager;
     private final AccountManager accountManager;
+    private final Invoker invoker;
 
     @Inject
-    public AzureAuthenticationExtensionApiResource(OauthSessionStore oauthSessionStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService, RuntimeContext runtimeContext, RoleManager roleManager, AccountManager accountManager) {
+    public AzureAuthenticationExtensionApiResource(OauthSessionStore oauthSessionStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService, RuntimeContext runtimeContext, RoleManager roleManager, AccountManager accountManager, Invoker invoker) {
         this.authorizationContext = authorizationContext;
         this.oauthSessionStore = oauthSessionStore;
         this.azureOAuthService = azureOAuthService;
         this.runtimeContext = runtimeContext;
         this.roleManager = roleManager;
         this.accountManager = accountManager;
+        this.invoker = invoker;
     }
 
     @GET
@@ -84,7 +92,7 @@ public class AzureAuthenticationExtensionApiResource {
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) {
+    public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) throws URISyntaxException {
         logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId(), clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
         logger.info("Account Id is fetched from Auth Session Store at Login");
@@ -92,14 +100,33 @@ public class AzureAuthenticationExtensionApiResource {
         logger.info("Account is fetched from From Account Manager at Login");
         AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId);
         logger.info("AuthenticationResponse is Generated");
+
         int maxAgeInSeconds = getMaxAgeInSeconds();
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
-        NewCookie sessionCookie = new NewCookie(Constants.CHATBOT_SESSION_ID,
-                clientSessionId, "/", "*", DEFAULT_VERSION, Constants.COMMENT, maxAgeInSeconds, expiry, true, true);
+        String routingURL =
+                invoker.getRoutingInfo().getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
+        URI httpURI = new URI(routingURL);
+
+        String chatbotSessionCookie = Constants.CHATBOT_SESSION_ID + Constants.EQUAL_TO + clientSessionId +
+                "; Version=" + DEFAULT_VERSION +
+                "; Comment=" + Constants.COMMENT +
+                "; Path=" + "/" + "; Domain=" + httpURI.getHost() +
+                "; Max-Age=" + maxAgeInSeconds +
+                "; Expires=" + expiry +
+                "; Secure; HttpOnly; SameSite=None;";
+        String kristaContextCookie = Constants.X_KRISTA_CONTEXT + Constants.EQUAL_TO + getEncodedClientSessionId(clientSessionId) +
+                "; Version=" + DEFAULT_VERSION +
+                "; Comment=" + Constants.COMMENT +
+                "; Path=" + "/" + "; Domain=" + httpURI.getHost() +
+                "; Max-Age=" + maxAgeInSeconds +
+                "; Expires=" + expiry +
+                "; Secure; HttpOnly; SameSite=None;";
+
         return Response.ok(GsonJsonMapperImpl.getInstance().toString(authenticationResponse))
-                .cookie(sessionCookie)
-                .header(SET_COOKIE, sessionCookie)
+                .header(SET_COOKIE, chatbotSessionCookie)
+                .header(SET_COOKIE, kristaContextCookie)
                 .header(Constants.CHATBOT_SESSION_ID, clientSessionId)
+                .entity(GsonJsonMapper.create().toString(authenticationResponse))
                 .build();
     }
 
