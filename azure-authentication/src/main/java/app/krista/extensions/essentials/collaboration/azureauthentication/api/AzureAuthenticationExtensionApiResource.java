@@ -9,6 +9,7 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.common
 import app.krista.extensions.essentials.collaboration.azureauthentication.exception.FileOperationException;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
+import app.krista.extensions.essentials.collaboration.azureauthentication.util.CommonUtils;
 import app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants;
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
@@ -92,7 +93,7 @@ public class AzureAuthenticationExtensionApiResource {
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId) throws URISyntaxException {
+    public Response login(@HeaderParam(CLIENT_SESSION_ID) String clientSessionId, @HeaderParam(Constants.CALLER_URI) String callerUri) throws URISyntaxException {
         logger.info("authorization context id:{} and clientSessionId: {}", authorizationContext.getAuthorizedAccount().getAccountId(), clientSessionId);
         String accountId = oauthSessionStore.getSessionId(clientSessionId);
         logger.info("Account Id is fetched from Auth Session Store at Login");
@@ -105,23 +106,23 @@ public class AzureAuthenticationExtensionApiResource {
         Date expiry = new Date(System.currentTimeMillis() + maxAgeInSeconds * 1000L);
         String routingURL =
                 invoker.getRoutingInfo().getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
-        URI httpURI = new URI(routingURL);
+        URI httpURI = new URI((!Objects.isNull(callerUri) && !callerUri.isBlank()) ? callerUri : routingURL);
 
-        String chatbotSessionCookie = Constants.CHATBOT_SESSION_ID + Constants.EQUAL_TO + clientSessionId +
-                "; Version=" + DEFAULT_VERSION +
-                "; Comment=" + Constants.COMMENT +
-                "; Path=" + "/" + "; Domain=" + httpURI.getHost() +
-                "; Max-Age=" + maxAgeInSeconds +
-                "; Expires=" + expiry +
-                "; Secure; HttpOnly; SameSite=None;";
-        String kristaContextCookie = Constants.X_KRISTA_CONTEXT + Constants.EQUAL_TO + getEncodedClientSessionId(clientSessionId) +
-                "; Version=" + DEFAULT_VERSION +
-                "; Comment=" + Constants.COMMENT +
-                "; Path=" + "/" + "; Domain=" + httpURI.getHost() +
-                "; Max-Age=" + maxAgeInSeconds +
-                "; Expires=" + expiry +
-                "; Secure; HttpOnly; SameSite=None;";
+        String chatbotSessionCookie = CommonUtils.buildSecureCookie(
+                Constants.CHATBOT_SESSION_ID,
+                clientSessionId,
+                httpURI.getHost(),
+                maxAgeInSeconds,
+                expiry
+        );
 
+        String kristaContextCookie = CommonUtils.buildSecureCookie(
+                Constants.X_KRISTA_CONTEXT,
+                getEncodedClientSessionId(clientSessionId),
+                httpURI.getHost(),
+                maxAgeInSeconds,
+                expiry
+        );
         return Response.ok(GsonJsonMapperImpl.getInstance().toString(authenticationResponse))
                 .header(SET_COOKIE, chatbotSessionCookie)
                 .header(SET_COOKIE, kristaContextCookie)
