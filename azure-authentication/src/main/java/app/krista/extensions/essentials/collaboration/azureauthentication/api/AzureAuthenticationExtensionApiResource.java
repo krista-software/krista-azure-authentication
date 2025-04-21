@@ -21,6 +21,7 @@ import app.krista.ksdk.context.RuntimeContext;
 import app.krista.model.field.util.GsonJsonMapper;
 import app.krista.omni.sdk.spi.util.GsonJsonMapperImpl;
 import com.google.gson.JsonObject;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,27 +109,37 @@ public class AzureAuthenticationExtensionApiResource {
                 invoker.getRoutingInfo().getRoutingURL(HttpProtocol.PROTOCOL_NAME, RoutingInfo.Type.APPLIANCE);
         URI httpURI = new URI((!Objects.isNull(callerUri) && !callerUri.isBlank()) ? callerUri : routingURL);
 
-        String chatbotSessionCookie = CommonUtils.buildSecureCookie(
-                Constants.CHATBOT_SESSION_ID,
-                clientSessionId,
-                httpURI.getHost(),
-                maxAgeInSeconds,
-                expiry
-        );
+        String chatbotSessionCookie = getChatbotSessionCookie(clientSessionId, httpURI, maxAgeInSeconds, expiry);
+        String kristaContextCookie = getKristaContextCookie(clientSessionId, httpURI, maxAgeInSeconds, expiry);
 
-        String kristaContextCookie = CommonUtils.buildSecureCookie(
-                Constants.X_KRISTA_CONTEXT,
-                getEncodedClientSessionId(clientSessionId),
-                httpURI.getHost(),
-                maxAgeInSeconds,
-                expiry
-        );
         return Response.ok(GsonJsonMapperImpl.getInstance().toString(authenticationResponse))
                 .header(SET_COOKIE, chatbotSessionCookie)
                 .header(SET_COOKIE, kristaContextCookie)
                 .header(Constants.CHATBOT_SESSION_ID, clientSessionId)
                 .entity(GsonJsonMapper.create().toString(authenticationResponse))
                 .build();
+    }
+
+    @NotNull
+    private static String getChatbotSessionCookie(String clientSessionId, URI httpURI, int maxAgeInSeconds, Date expiry) {
+        return CommonUtils.buildSecureCookie(
+                Constants.CHATBOT_SESSION_ID,
+                clientSessionId,
+                httpURI.getHost(),
+                maxAgeInSeconds,
+                expiry
+        );
+    }
+
+    @NotNull
+    private String getKristaContextCookie(String clientSessionId, URI httpURI, int maxAgeInSeconds, Date expiry) {
+        return CommonUtils.buildSecureCookie(
+                Constants.X_KRISTA_CONTEXT,
+                getEncodedClientSessionId(clientSessionId),
+                httpURI.getHost(),
+                maxAgeInSeconds,
+                expiry
+        );
     }
 
     @GET
