@@ -21,4 +21,5 @@ public class Constants {
     public static final String CLIENT_SESSION_ID = "clientSessionId";
     public static final String AUTH_CONTEXT_ID = "authContextId";
     public static final String TEXT_FIELD_TYPE = "Text";
+    public static final String CALLER_URI = "caller_uri";
 }

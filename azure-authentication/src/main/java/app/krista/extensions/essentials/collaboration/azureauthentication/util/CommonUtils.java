@@ -3,6 +3,7 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.util;
 import app.krista.extension.authorization.AuthorizationException;
 import app.krista.ksdk.authentication.AuthenticationSettings;
 
+import javax.ws.rs.core.NewCookie;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -159,4 +160,19 @@ public final class CommonUtils {
         return keyValue.length > 1 ? keyValue[1] : null;
     }
 
+    public static String buildSecureCookie(String name, String value, String domain, int maxAge, Date expiry) {
+        NewCookie baseCookie = new NewCookie(
+                name,
+                value,
+                "/",
+                domain,
+                NewCookie.DEFAULT_VERSION,
+                "Cookie for session management",
+                maxAge,
+                expiry,
+                true,
+                true
+        );
+        return baseCookie+ "; SameSite=None";
+    }
 }
