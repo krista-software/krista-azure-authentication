@@ -4,6 +4,7 @@ import app.krista.extension.authorization.MustAuthorizeException;
 import app.krista.extension.authorization.RequestAuthenticator;
 import app.krista.extension.executor.Invoker;
 import app.krista.extension.impl.anno.*;
+import app.krista.extensions.essentials.collaboration.azureauthentication.service.AccountProvisioner;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.UserInfoService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.service.auth.AzureOAuthService;
 import app.krista.extensions.essentials.collaboration.azureauthentication.store.OauthSessionStore;
@@ -66,8 +67,8 @@ public class AzureAuthenticationExtension {
         String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
 
         if (StringUtils.isBlank(defaultRole)) {
-            logger.info("Default Role is blank or not provided. Skipping role validation.");
-            return ;
+            System.out.println("#####-ADDING ROLE TO ATTRIBUTES...");
+            attributes.put(DEFAULT_ROLE_KEY, AccountProvisioner.DEFAULT_ROLE_FOR_NEW_ACCOUNT);
         }
 
         if (!authorizationContext.isWorkspaceAdmin() && isSetupRoleChanged(defaultRole)) {
@@ -102,6 +103,15 @@ public class AzureAuthenticationExtension {
         String clientSecret = attributes.get(CLIENT_SECRET);
         String tenantId = attributes.get(TENANT_ID);
         String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
+        if (defaultRole == null || defaultRole.isBlank()) {
+            String roleFromAuthStore = oauthSessionStore.getInvokerAttributes().get(DEFAULT_ROLE_KEY);
+            if (roleFromAuthStore == null) {
+                defaultRole = AccountProvisioner.DEFAULT_ROLE_FOR_NEW_ACCOUNT;
+            } else {
+                defaultRole = roleFromAuthStore;
+            }
+        }
+        System.out.println("#####-DEFAULT ROLE IS: " + defaultRole);
 
         logger.info("Refresh Token is Null");
         NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
