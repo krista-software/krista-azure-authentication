@@ -103,15 +103,6 @@ public class AzureAuthenticationExtension {
         String clientSecret = attributes.get(CLIENT_SECRET);
         String tenantId = attributes.get(TENANT_ID);
         String defaultRole = attributes.get(DEFAULT_ROLE_KEY);
-        if (defaultRole == null || defaultRole.isBlank()) {
-            String roleFromAuthStore = oauthSessionStore.getInvokerAttributes().get(DEFAULT_ROLE_KEY);
-            if (roleFromAuthStore == null) {
-                defaultRole = AccountProvisioner.DEFAULT_ROLE_FOR_NEW_ACCOUNT;
-            } else {
-                defaultRole = roleFromAuthStore;
-            }
-        }
-        System.out.println("#####-DEFAULT ROLE IS: " + defaultRole);
 
         logger.info("Refresh Token is Null");
         NamedValuedField clientIdField = new NamedValuedField(CLIENT_ID, TEXT_FIELD_TYPE, clientId, Map.of(), Map.of());
