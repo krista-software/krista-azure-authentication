@@ -10,37 +10,32 @@ group 'app.krista.extensions.essentials.collaboration'
 
 /*
  * Use extension.name for archiveBaseName, extension.version for version.
- * Resulting jar: <extension.name>-<extension.version>.jar e.g. Office365Calendar-2.0.13-rc1.jar
+ * Resulting jar: <extension.name>-<extension.version>.jar e.g. AzureAuthentication-2.0.13-rc1.jar
  */
 def computedBaseName = "AzureAuthentication"
 def computedVersion = "local"
 
-afterEvaluate {
-    def releasePropsFile = file('release.properties')
-    if (releasePropsFile.exists()) {
-        def props = new Properties()
-        releasePropsFile.withInputStream { stream -> props.load(stream) }
-        computedBaseName = (props['extension.name'] ?: "AzureAuthentication").replaceAll(/\s+/, "")
-        computedVersion = props['extension.version'] ?: "local"
+tasks.register("setReleaseProperties") {
+    dependsOn("generateReleaseProperties")
+    doFirst {
+        def releasePropsFile = file("release.properties")
+        if (releasePropsFile.exists()) {
+            def props = new Properties()
+            releasePropsFile.withInputStream { stream -> props.load(stream) }
+            computedBaseName = (props['extension.name'] ?: computedBaseName).replaceAll(/\s+/, "")
+            computedVersion = props['extension.version'] ?: computedVersion
 
-        version = computedVersion
-        jar {
-            archiveBaseName.set(computedBaseName)
-        }
-    } else {
-        logger.warn("release.properties file not found. Using default values.")
-        version = computedVersion
-        jar {
-            archiveBaseName.set(computedBaseName)
+            project.ext.set("finalBaseName", computedBaseName)
+            project.version = computedVersion
+
+            println "✔ Loaded extension name = ${computedBaseName}, version = ${computedVersion}"
+        } else {
+            logger.warn("⚠ release.properties not found; using default values.")
+            project.ext.set("finalBaseName", computedBaseName)
+            project.version = computedVersion
         }
     }
 }
-
-version = computedVersion
-
-compileJava.dependsOn clean
-
-System.setProperty("extensionVersion", version.toString())
 
 sourceCompatibility = '21'
 targetCompatibility = '21'
@@ -83,7 +78,6 @@ tasks.register('includeSources', Exec) {
     dependsOn copyGradleFile
     commandLine "cp", "-r", "$projectDir/src", "$projectDir/build/classes/java/main/META-INF/project/src"
 }
-
 import java.util.regex.Pattern
 /*
     Task to generate release.properties files in below format.
@@ -96,7 +90,6 @@ import java.util.regex.Pattern
 abstract class GenerateReleasePropertiesTask extends DefaultTask {
     @TaskAction
     def generateProperties() {
-
         def extensionFilePath = 'src/main/java/app/krista/extensions/essentials/collaboration/azureauthentication/AzureAuthenticationExtension.java'
         def extensionFile = project.file(extensionFilePath)
         if (!extensionFile.exists()) {
@@ -129,7 +122,7 @@ abstract class GenerateReleasePropertiesTask extends DefaultTask {
             throw new GradleException("Could not find extension version in ${extensionFilePath}")
         }
         if (!properties.getProperty('domain.name') || !properties.getProperty('ecosystem.name')) {
-            throw new GradleException("Could not find domain name or ecosystem name in ${extensionFile}")
+            throw new GradleException("Could not find domain name or ecosystem name in ${areaFilePath}")
         }
         def releasePropertiesFile = project.file('release.properties')
         def content = properties.collect { key, value -> "${key}=${value}" }.join('\n')
@@ -151,7 +144,6 @@ abstract class GenerateReleasePropertiesTask extends DefaultTask {
             if (line.contains(annotationName)) {
                 inAnnotation = true
             }
-
             if (inAnnotation) {
                 annotationText.append(line)
                 if (line.contains(")")) {
@@ -167,7 +159,6 @@ abstract class GenerateReleasePropertiesTask extends DefaultTask {
         }
     }
 }
-
 tasks.register('generateReleaseProperties', GenerateReleasePropertiesTask) {
     group = 'build'
     description = 'Generates release.properties file with extension version and domain information'
@@ -175,10 +166,14 @@ tasks.register('generateReleaseProperties', GenerateReleasePropertiesTask) {
 tasks.named("jar") {
     dependsOn tasks.named("generateReleaseProperties")
 }
+
 jar {
-    // Without this dependency, the jar task may use the fallback "local" value if the file is not available during configuration.
-    dependsOn tasks.named("generateReleaseProperties")
-    archiveBaseName.set(computedBaseName)
+    // This task ensures that release.properties is read *after* it has been generated.
+    // Gradle's configuration phase runs before tasks like `generateReleaseProperties` execute,
+    // so directly reading the release.properties file earlier results in missing or default values.
+    dependsOn tasks.named("setReleaseProperties")
+    archiveBaseName = project.ext.has("finalBaseName") ? project.ext.finalBaseName : "AzureAuthentication"
+
     manifest {}
     from {
         configurations.implementation.collect {
@@ -188,4 +183,5 @@ jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     duplicatesStrategy = "exclude"
 }
+
 
