@@ -1,6 +1,6 @@
 # Obtaining Credentials For Authentication
 
-* For the Azure Extension, you would need to obtain Client ID, Tenant ID, and Client Secret from the Azure Portal.
+* For the Azure Authentication Extension, you would need to obtain Client ID, Tenant ID, and Client Secret from the Azure Portal.
 
 ### Steps to get Client ID, Tenant ID, and Client Secret
 
