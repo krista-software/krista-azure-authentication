@@ -11,5 +11,3 @@
 - **KR-16014 - Azure Authentication :- Validation error message not displayed correctly for an invalid role in Azure Authentication.
 - **KE-1876  - Azure Authentication :- Chatbot is unable to operate on the hosted side if it uses Azure authentication.
 - **KR-18508 - Azure Authentication :- Azure Auth:- Without providing role, not able to validate attributes displaying 'Provided attributes are not valid. Please check again'
-
-## Known Issues

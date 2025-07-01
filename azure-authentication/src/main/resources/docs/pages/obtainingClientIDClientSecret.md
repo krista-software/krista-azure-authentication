@@ -26,8 +26,8 @@
   the single tenant only (first option).
 
 * Under Redirect URI, select the Web platform and add the authorized redirect URI for your Azure extension. To do this, copy the Extension Base URL from the Invoker's Details tab and replace the routing ID in the URL with /authn/v3/oauth/callback.
-For example, if the routing URL from the Details tab is https://extension.<your-Domain>/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e, where **FwoDdIazmBVeU4DRo0F_sdQ_e_e** is the routing ID, the updated redirect URI will be:
-  https://extension.<your-Domain>/extension/api/authn/v3/oauth/callback. For Example:  https://extension.us.krista.app/extension/api/authn/v3/oauth/callback. 
+For example, if the routing URL from the Details tab is https://extension.your-domain/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e, where **FwoDdIazmBVeU4DRo0F_sdQ_e_e** is the routing ID, the updated redirect URI will be:
+  https://extension.your-domain/extension/api/authn/v3/oauth/callback. For Example:  https://extension.us.krista.app/extension/api/authn/v3/oauth/callback.
 * Finally, click Register.
 
   ![Authorized redirect uri Reference](../_media/authorizedRedirectURIReference.png)
