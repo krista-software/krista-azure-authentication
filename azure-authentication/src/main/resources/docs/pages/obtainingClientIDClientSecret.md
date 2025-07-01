@@ -1,6 +1,6 @@
 # Obtaining Credentials For Authentication
 
-* For the Outlook Extension, you would need to obtain Client ID, Tenant ID, and Client Secret from the Azure Portal.
+* For the Azure Extension, you would need to obtain Client ID, Tenant ID, and Client Secret from the Azure Portal.
 
 ### Steps to get Client ID, Tenant ID, and Client Secret
 
@@ -8,8 +8,8 @@
   ![Home Page](../_media/homePage.png)
 
 
-* Under **Azure services**, click **Azure Active Directory**. If not found readily click **More services** to find Azure
-  Active Directory.
+* Under **Azure services**, click **Microsoft Entra ID**. If not found readily click **More services** to find Microsoft
+  Entra ID.
   ![Azure Active Directory](../_media/azureActiveDirectory.png)
 
 
@@ -25,10 +25,9 @@
   that would be display name. Select the **Supported account types**. Out of the available options, select accounts in
   the single tenant only (first option).
 
-* Under Redirect URI, select the Web platform and add the authorized redirect URI for your Azure extension. To do this, copy the routing URL from the Invoker's Details tab and replace the routing ID in the URL with /authn/v3/oauth/callback.
-For example, if the routing URL from the Details tab is https://extension.qa-in.eng.krista.app/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e, where **FwoDdIazmBVeU4DRo0F_sdQ_e_e** is the routing ID, the updated redirect URI will be:
-https://extension.qa-in.eng.krista.app/extension/api/authn/v3/oauth/callback.
-* Finally, click Register.
+* Under Redirect URI, select the Web platform and add the authorized redirect URI for your Azure extension. To do this, copy the Extension Base URL from the Invoker's Details tab and replace the routing ID in the URL with /authn/v3/oauth/callback.
+For example, if the routing URL from the Details tab is https://extension.<your-Domain>/extension/api/FwoDdIazmBVeU4DRo0F_sdQ_e_e, where **FwoDdIazmBVeU4DRo0F_sdQ_e_e** is the routing ID, the updated redirect URI will be:
+  https://extension.<your-domain>/extension/api/authn/v3/oauth/callback. For Example:  https://extension.us.krista.app/extension/api/authn/v3/oauth/callback. * Finally, click Register.
 
   ![Authorized redirect uri Reference](../_media/authorizedRedirectURIReference.png)
 
