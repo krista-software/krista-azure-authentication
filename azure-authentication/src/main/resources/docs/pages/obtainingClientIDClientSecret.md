@@ -25,7 +25,7 @@
   that would be display name. Select the **Supported account types**. Out of the available options, select accounts in
   the single tenant only (first option).
 
-* Under Redirect URI, select the Web platform and add this authorized redirect URI for your Azure extension: https://extension.us.krista.app/extension/api//authn/v3/oauth/callback 
+* Under Redirect URI, select the Web platform and add this authorized redirect URI for your Azure Authentication Extension: https://extension.us.krista.app/extension/api//authn/v3/oauth/callback 
 
 * Finally, click Register.
   ![Authorized redirect uri Reference](../_media/authorizedRedirectURIReference.png)
