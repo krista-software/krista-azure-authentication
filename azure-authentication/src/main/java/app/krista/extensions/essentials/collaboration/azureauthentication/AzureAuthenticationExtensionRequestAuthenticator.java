@@ -69,7 +69,12 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
             logger.info("path {}", path);
-            if (Objects.equals("/login", path)) {
+            // In case of web form requests, there is no any user before submitting form.
+            // We need X-Krista-CSF to prepare for media upload.
+            // To create X-Krista-CSF, we need to return any valid account id.
+            final boolean isWebFormRequests = Objects.equals("/assets/omni-form.css", path) ||
+                    Objects.equals("/assets/omni-form.js", path);
+            if (Objects.equals("/login", path) || isWebFormRequests) {
                 logger.info("Preparing for Login at getAuthenticatedAccountId");
                 return authorizationContext.getAuthorizedAccount().getAccountId();
             }
