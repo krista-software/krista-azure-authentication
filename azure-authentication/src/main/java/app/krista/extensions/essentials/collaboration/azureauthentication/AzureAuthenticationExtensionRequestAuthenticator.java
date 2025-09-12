@@ -68,11 +68,21 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
         try {
             httpRequest.bufferBody();
             String path = httpRequest.getUri().getPath();
-            logger.info("path {}", path);
+            logger.info("AZURE AUTH PATH: {}", path);
             if (Objects.equals("/login", path)) {
                 logger.info("Preparing for Login at getAuthenticatedAccountId");
                 return authorizationContext.getAuthorizedAccount().getAccountId();
             }
+
+            // These both file names should be same as defined in krista-web-form extension
+            final boolean isWebFormRequests = path.endsWith("/omni-form.css") || path.endsWith("/omni-form.js");
+            if (isWebFormRequests) {
+                // In case of web form requests, there is no any user before submitting form.
+                // We need X-Krista-CSF to prepare for media upload.
+                // To create X-Krista-CSF, we need to return any valid account id.
+                return authorizationContext.getAuthorizedAccount().getAccountId();
+            }
+
             if (Objects.equals("/callback", path)) {
                 MultivaluedMap<String, String> queryParameters = httpRequest.getQueryParameters();
                 List<String> code = queryParameters.get("code");
