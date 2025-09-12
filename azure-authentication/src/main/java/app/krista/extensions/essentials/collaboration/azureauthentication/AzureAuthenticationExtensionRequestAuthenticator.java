@@ -74,6 +74,7 @@ public class AzureAuthenticationExtensionRequestAuthenticator implements Request
                 return authorizationContext.getAuthorizedAccount().getAccountId();
             }
 
+            // These both file names should be same as defined in krista-web-form extension
             final boolean isWebFormRequests = path.endsWith("/omni-form.css") || path.endsWith("/omni-form.js");
             if (isWebFormRequests) {
                 // In case of web form requests, there is no any user before submitting form.
