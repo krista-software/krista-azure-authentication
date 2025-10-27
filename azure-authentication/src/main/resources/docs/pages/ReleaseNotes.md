@@ -1,16 +1,17 @@
-# Release Notes
+[<span style = "color : blue ; text-decoration: none">< Back<span>](/)
 
+# Release Notes
+---
 ## Version 1.0.4 
 
-**Release Date**: October 2024
-**Developer**: Ramgopal Patidar
-**Krista Service APIs Java**: 1.0.117
-**Global Catalog Version**: GC-2025.11.1
+- **Developer**: Ramgopal Patidar 
+- **Krista Service APIs Java**: 1.0.117 
+- **Global Catalog Version**: GC-2025.11.1
 
 
-## 🚀 Implemented Features
+## Implemented Features
 
-### ✅ Comprehensive Documentation for Azure Authentication Extension
+###  Comprehensive Documentation for Azure Authentication Extension
 - **Complete Documentation Rewrite**: Following official Krista Extension documentation guidelines
 - **Step-by-Step Azure Portal Setup**: Detailed guide with screenshots for creating Azure app registrations
 - **OAuth 2.0 Authentication Flow Documentation**: Comprehensive coverage of authentication flows, token management, and security
@@ -33,8 +34,8 @@
 
 ## Version 1.0.3 
 
-**Krista Service APIs Java**: 1.0.112
-**Appliance Release Version**: 3.5.3
+- **Krista Service APIs Java**: 1.0.112
+- **Appliance Release Version**: 3.5.3
 
 ## Resolved Issues
 
