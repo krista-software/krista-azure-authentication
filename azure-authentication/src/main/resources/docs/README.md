@@ -6,13 +6,13 @@ The Azure Authentication Extension provides seamless OAuth 2.0 authentication fo
 
 ## Key Features
 
-✅ **OAuth 2.0 Authentication**: Secure authentication using Microsoft's OAuth 2.0 implementation
-✅ **Microsoft Entra ID Integration**: Direct integration with Microsoft Entra ID for user authentication
-✅ **Automatic Account Provisioning**: Automatic creation and management of user accounts
-✅ **Token Management**: Automatic handling of access and refresh tokens
-✅ **Role-Based Access Control**: Configurable default roles for new users
-✅ **Session Management**: Secure session handling and management
-✅ **Trust Extension Support**: Enhanced security with trust extension capabilities
+- ✅ **OAuth 2.0 Authentication**: Secure authentication using Microsoft's OAuth 2.0 implementation
+- ✅ **Microsoft Entra ID Integration**: Direct integration with Microsoft Entra ID for user authentication
+- ✅ **Automatic Account Provisioning**: Automatic creation and management of user accounts
+- ✅ **Token Management**: Automatic handling of access and refresh tokens
+- ✅ **Role-Based Access Control**: Configurable default roles for new users
+- ✅ **Session Management**: Secure session handling and management
+- ✅ **Trust Extension Support**: Enhanced security with trust extension capabilities
 
 ## Quick Start Guide
 
