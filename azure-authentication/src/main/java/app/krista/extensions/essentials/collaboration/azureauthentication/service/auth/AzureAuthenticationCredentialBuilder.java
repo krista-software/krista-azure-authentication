@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.ErrorMessages.*;
 
 public class AzureAuthenticationCredentialBuilder {
     private String routingUrl;
@@ -29,7 +30,7 @@ public class AzureAuthenticationCredentialBuilder {
             Set<String> scps = Arrays.stream(scope.split(BLANK_SPACE)).collect(Collectors.toSet());
             return new AzureAuthenticationCredential(new OAuthCredentialImpl(cId, cSecret, tId), scps, routingUrl);
         } catch (IOException cause) {
-            throw new FileOperationException("Failed to load public configuration file.", cause);
+            throw new FileOperationException(CONFIGURATION_FILE_LOAD_FAILED, cause);
         }
     }
 
