@@ -1,9 +1,12 @@
-[comment]: <> (Left navigation)
+* [🏠 Home](/)
 
-* [Home](/)
+* **🚀 Getting Started**
+  * [Extension Configuration](pages/ExtensionConfiguration.md)
+  * [Authentication](pages/Authentication.md)
+  * [Creating Azure App](pages/CreatingAzureApp.md)
 
-* [Overview](pages/overview.md)
+* **🔧 Troubleshooting**
+  * [Error Message Reference](/pages/ErrorMessageReference.md)
 
-* [Obtaining Credentials For Authentication](pages/obtainingClientIDClientSecret.md)
-
-* [Release Notes](pages/release-notes.md)
+* **📚 Additional Resources**
+  * [Release Notes](pages/ReleaseNotes.md)

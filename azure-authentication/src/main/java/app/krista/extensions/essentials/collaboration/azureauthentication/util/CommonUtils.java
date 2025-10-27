@@ -2,6 +2,7 @@ package app.krista.extensions.essentials.collaboration.azureauthentication.util;
 
 import app.krista.extension.authorization.AuthorizationException;
 import app.krista.ksdk.authentication.AuthenticationSettings;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.ErrorMessages.*;
 
 import javax.ws.rs.core.NewCookie;
 import java.text.DateFormat;
@@ -92,20 +93,21 @@ public final class CommonUtils {
 
     public static void validateDomains(Object supportedDomains) {
         if (!(supportedDomains instanceof String)) {
-            throw new IllegalArgumentException("Input is not string type:" + supportedDomains);
+            throw new IllegalArgumentException(INVALID_INPUT_TYPE);
         }
         if (((String) supportedDomains).isEmpty()) {
-            throw new IllegalArgumentException("Supported domains list is empty.");
+            throw new IllegalArgumentException(EMPTY_SUPPORTED_DOMAINS);
         }
         String supportedDomainsString = (String) supportedDomains;
         String[] domains = supportedDomainsString.split(",");
         if (domains.length == 0) {
-            throw new IllegalArgumentException("List of domain is empty.");
+            throw new IllegalArgumentException(EMPTY_SUPPORTED_DOMAINS);
         }
         for (String domain : domains) {
             String trimmedDomain = domain.trim();
             if (!trimmedDomain.equalsIgnoreCase("all") && !CommonUtils.isValidDomain(trimmedDomain)) {
-                throw new IllegalArgumentException("Invalid domain name:" + domain);
+                throw new IllegalArgumentException(invalidParameterFormat("domain", "company.com") +
+                    " Invalid domain: " + domain);
             }
         }
     }
@@ -113,10 +115,10 @@ public final class CommonUtils {
     public static void validateInputParams(Map<String, Object> invokerAttributes, Set<String> requiredInputs,
                                            Object supportedDomains) {
         if (invokerAttributes == null || invokerAttributes.isEmpty()) {
-            throw new IllegalArgumentException("Invoker attributes are not found.");
+            throw new IllegalArgumentException(MISSING_INVOKER_ATTRIBUTES);
         }
         if (requiredInputs == null || requiredInputs.isEmpty()) {
-            throw new IllegalArgumentException("Required inputs are not found.");
+            throw new IllegalArgumentException(EMPTY_PARAMETER_LIST);
         }
         Set<String> missingRequiredParams = new HashSet<>();
         for (String requiredParam : requiredInputs) {
@@ -126,14 +128,15 @@ public final class CommonUtils {
             }
         }
         if (!missingRequiredParams.isEmpty()) {
-            throw new IllegalArgumentException("Missing required invoker params :" + missingRequiredParams);
+            throw new IllegalArgumentException(MISSING_REQUIRED_PARAMETERS +
+                " Missing parameters: " + String.join(", ", missingRequiredParams));
         }
         validateDomains(supportedDomains);
     }
 
     public static void validateIfSupportedDomain(String email, String allDomains, Object supportedDomains) {
         if (!isValidEmail(email)) {
-            throw new IllegalArgumentException("Not valid email address: " + email);
+            throw new IllegalArgumentException(INVALID_EMAIL_FORMAT + " Provided email: " + email);
         }
         if (!supportedDomains.toString().isEmpty()) {
             boolean isSupportedFromExtension = CommonUtils
@@ -143,8 +146,8 @@ public final class CommonUtils {
                     isEmailDomainPresentInSupportedWorkspaceDomains(email,
                             allDomains);
             if (!isSupportedFromExtension && !isSupportedFromWorkSpace) {
-                throw new IllegalArgumentException(
-                        "Domain " + email.substring(email.indexOf("@") + 1) + " is not supported.");
+                String domain = email.substring(email.indexOf("@") + 1);
+                throw new IllegalArgumentException(domainNotSupported(domain));
             }
         }
     }

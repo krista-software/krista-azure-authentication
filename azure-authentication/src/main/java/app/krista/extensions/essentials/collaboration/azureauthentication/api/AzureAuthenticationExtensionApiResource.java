@@ -173,7 +173,9 @@ public class AzureAuthenticationExtensionApiResource {
                     .header(Constants.CHATBOT_SESSION_ID, sessionId)
                     .build();
         } catch (IOException cause) {
-            throw new FileOperationException("error occurred while loading page", cause);
+            throw new FileOperationException(
+                "Unable to load the authentication page. This may be due to network issues or server problems. " +
+                "Please try again in a few moments.", cause);
         }
     }
 

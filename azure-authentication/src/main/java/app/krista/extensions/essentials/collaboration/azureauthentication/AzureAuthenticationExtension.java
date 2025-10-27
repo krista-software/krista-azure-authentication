@@ -24,13 +24,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.ErrorMessages.*;
 
 @Domain(id = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7",
         name = "Authentication",
         ecosystemId = "catEntryEcosystem_d3b05047-07b0-4b06-95a3-9fb8f7f608d9",
         ecosystemName = "Krista",
         ecosystemVersion = "3e7e09ed-688f-41fa-ab7c-ff879e750011")
-@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.3",name = "Azure Authentication", supportingModes = ExecutionMode.LIVE)
+@Extension(implementingDomainIds = "catEntryDomain_db053e8f-a194-4dde-aa6f-701ef7a6b3a7", jaxrsId = "authn", requireWorkspaceAdminRights = true, version = "1.0.4",name = "Azure Authentication", supportingModes = ExecutionMode.LIVE)
 @Field.Text(name = AzureAuthenticationExtension.DEFAULT_ROLE_KEY, required = false)
 @Field.Text(name = CLIENT_ID)
 @Field.Text(name = Constants.CLIENT_SECRET, isSecured = true)
@@ -113,7 +114,7 @@ public class AzureAuthenticationExtension {
         logger.info("Auth contextID : {}", authContextId);
         NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
 
-        throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
+        throw new MustAuthorizeException(UNAUTHORIZED_USER, List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
     }
 
     private boolean isSetupRoleChanged(String incomingDefaultRole) {

@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static app.krista.extensions.essentials.collaboration.azureauthentication.util.Constants.*;
+import static app.krista.extensions.essentials.collaboration.azureauthentication.util.ErrorMessages.*;
 
 @Service
 public class AzureOAuthService {
@@ -83,7 +84,8 @@ public class AzureOAuthService {
                     .authority(azureAuthenticationCredential.getAuthority())
                     .build();
         } catch (MalformedURLException cause) {
-            throw new MalformedParametersException("error while construction authorization url: " + cause.getMessage());
+            logger.error("Failed to build client application: {}", cause.getMessage(), cause);
+            throw new MalformedParametersException(MALFORMED_AUTHORIZATION_URL);
         }
     }
 
@@ -145,11 +147,10 @@ public class AzureOAuthService {
             logger.info("AT Refresh Token Auth contextID : {}", authContextId);
             NamedValuedField authContextField = new NamedValuedField(AUTH_CONTEXT_ID, TEXT_FIELD_TYPE, authContextId, Map.of(), Map.of());
 
-            throw new MustAuthorizeException("Unauthorized user, please authorize yourself", List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
+            throw new MustAuthorizeException(UNAUTHORIZED_USER, List.of(clientIdField, clientSecretField, tenantIdField, authContextField));
         } catch (Exception cause) {
-
-            logger.error("Invalid Token: {}", cause.getMessage(), cause);
-            throw new RuntimeException(cause);
+            logger.error("Token validation failed: {}", cause.getMessage(), cause);
+            throw new RuntimeException(INVALID_TOKEN, cause);
         }
     }
 

@@ -1,11 +1,7 @@
 plugins {
     id 'java-library'
-    id("io.github.surpsg.code-lines") version "0.0.1"
 }
-codeLinesStat {
-    sourceFilters.skipBlankLines = true // optional, `false` by default
-    fileExtensions = ['java'] // optional, empty by default
-}
+
 group 'app.krista.extensions.essentials.collaboration'
 
 /*
@@ -56,9 +52,8 @@ configurations {
 }
 
 dependencies {
-    annotationProcessor 'app.krista:extension-impl-anno-processors:1.0.112'
-    implementation 'app.krista:krista-apis:1.0.112'
-    implementation 'org.glassfish.hk2:hk2-api:3.0.3'
+    annotationProcessor 'app.krista:extension-impl-anno-processors:1.0.117'
+    implementation 'app.krista:krista-apis:1.0.117'
     implementation 'com.microsoft.graph:microsoft-graph:5.76.0'
     implementation 'com.microsoft.azure:msal4j:1.17.2'
     implementation 'com.kristasoft.common:common-test:1.0.43-rc1'
