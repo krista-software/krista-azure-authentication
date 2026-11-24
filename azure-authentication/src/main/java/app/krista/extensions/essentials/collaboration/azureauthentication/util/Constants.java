@@ -40,4 +40,5 @@ public class Constants {
     public static final String AUTH_CONTEXT_ID = "authContextId";
     public static final String TEXT_FIELD_TYPE = "Text";
     public static final String CALLER_URI = "caller_uri";
+    public static final String X_KRISTA_ACCESS_TOKEN = "X-Krista-Access-Token";
 }

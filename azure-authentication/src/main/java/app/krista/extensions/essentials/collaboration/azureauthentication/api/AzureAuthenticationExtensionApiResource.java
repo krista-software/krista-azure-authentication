@@ -32,6 +32,7 @@ import app.krista.extensions.essentials.collaboration.azureauthentication.util.C
 import app.krista.ksdk.accounts.Account;
 import app.krista.ksdk.accounts.AccountManager;
 import app.krista.ksdk.accounts.ModifiableAccount;
+import app.krista.ksdk.authentication.JwtSessionManager;
 import app.krista.ksdk.authorization.Role;
 import app.krista.ksdk.authorization.RoleManager;
 import app.krista.ksdk.context.AuthorizationContext;
@@ -70,9 +71,10 @@ public class AzureAuthenticationExtensionApiResource {
     private final RoleManager roleManager;
     private final AccountManager accountManager;
     private final Invoker invoker;
+    private final JwtSessionManager jwtSessionManager;
 
     @Inject
-    public AzureAuthenticationExtensionApiResource(OauthSessionStore oauthSessionStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService, RuntimeContext runtimeContext, RoleManager roleManager, AccountManager accountManager, Invoker invoker) {
+    public AzureAuthenticationExtensionApiResource(OauthSessionStore oauthSessionStore, AuthorizationContext authorizationContext, AzureOAuthService azureOAuthService, RuntimeContext runtimeContext, RoleManager roleManager, AccountManager accountManager, Invoker invoker, JwtSessionManager jwtSessionManager) {
         this.authorizationContext = authorizationContext;
         this.oauthSessionStore = oauthSessionStore;
         this.azureOAuthService = azureOAuthService;
@@ -80,6 +82,7 @@ public class AzureAuthenticationExtensionApiResource {
         this.roleManager = roleManager;
         this.accountManager = accountManager;
         this.invoker = invoker;
+        this.jwtSessionManager = jwtSessionManager;
     }
 
     @GET
@@ -118,7 +121,9 @@ public class AzureAuthenticationExtensionApiResource {
         logger.info("Account Id is fetched from Auth Session Store at Login");
         ModifiableAccount account = accountManager.getAccount(accountId);
         logger.info("Account is fetched from From Account Manager at Login");
-        AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId);
+        String accessToken = jwtSessionManager.createAccessTokenFromRefreshToken(clientSessionId);
+        logger.info("Access Token Generated at Login");
+        AuthenticationResponse authenticationResponse = createAuthenticationResponse(account, clientSessionId, accessToken);
         logger.info("AuthenticationResponse is Generated");
 
         int maxAgeInSeconds = getMaxAgeInSeconds();
@@ -208,7 +213,7 @@ public class AzureAuthenticationExtensionApiResource {
         return 24 * 60 * 60;
     }
 
-    private AuthenticationResponse createAuthenticationResponse(Account account, String sessionId)
+    private AuthenticationResponse createAuthenticationResponse(Account account, String sessionId, String accessToken)
             throws AuthorizationException {
         return new AuthenticationResponse(sessionId, account.getPerson().getPersonName(),
                 account.getPerson().getAvatarUrl(), account.getAccountId(),
@@ -217,7 +222,7 @@ public class AzureAuthenticationExtensionApiResource {
                 roleManager.isWorkspaceAdmin(account),
                 false,
                 Map.of("email", account.getPrimaryEmailAddress()),
-                Map.of("creationTime", getCurrentDateTime(), "newSession", true));
+                Map.of("creationTime", getCurrentDateTime(), "newSession", true, "accessToken", accessToken));
     }
 
     private String getCurrentDateTime() {

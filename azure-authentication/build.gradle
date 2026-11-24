@@ -52,8 +52,8 @@ configurations {
 }
 
 dependencies {
-    annotationProcessor 'app.krista:extension-impl-anno-processors:1.0.117'
-    implementation 'app.krista:krista-apis:1.0.117'
+    annotationProcessor 'app.krista:extension-impl-anno-processors:1.0.124-rc1'
+    implementation 'app.krista:krista-apis:1.0.124-rc1'
     implementation 'com.microsoft.graph:microsoft-graph:5.76.0'
     implementation 'com.microsoft.azure:msal4j:1.17.2'
     implementation 'com.kristasoft.common:common-test:1.0.43-rc1'
